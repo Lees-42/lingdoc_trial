@@ -459,19 +459,20 @@ CREATE INDEX idx_fts_gin ON file_search_index USING GIN(tsvector_text);
 **数据安全**:
 - 所有敏感数据（API Key、Token）使用系统级密钥链存储（Keytar 封装 Windows Credential Manager / macOS Keychain）
 - 用户原始文件不出本地，仅脱敏后的文本片段上传至 AI 端
+- **国密替代计划**：MVP 阶段暂沿用标准加密算法，后续将全面采用 **SM3（哈希）+ SM4（对称加密）** 替代现有 SHA256/AES 方案。Vault 中的敏感元数据及离线缓存文件优先使用 SM4-CBC/GCM 加密。
 
 **审计安全**:
 - 采用哈希链设计确保日志不可篡改
-- 每条审计记录包含前一记录的 SHA256 哈希
+- 每条审计记录包含前一记录的哈希值；MVP 阶段使用 SHA256，后续升级为 **SM3**
 - 验证时可重新计算并比对哈希值
 
 **Token 防伪**:
-- 基于"机器码 + 本地余额 + 密钥盐"生成 SHA256 签名
+- 基于"机器码 + 本地余额 + 密钥盐"生成签名；MVP 阶段使用 SHA256，后续升级为 **SM3 with HMAC**
 - 每次启动时校验签名，防止用户手动篡改本地数据库余额
 
 **传输安全**:
 - 前后端通信使用 HTTP（本地回环，无需 HTTPS）
-- 与云端 AI / 计费中台通信时，必须启用 TLS 1.2+
+- 与云端 AI / 计费中台通信时，必须启用 TLS 1.2+（后续评估切换至 **国密 SSL/TLS** 通道）
 
 ---
 

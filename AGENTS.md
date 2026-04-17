@@ -321,6 +321,7 @@ java -jar ruoyi-admin.jar
 - 使用 JWT Token（`Authorization: Bearer xxx`），存储于 Cookie
 - Token 有效期默认 30 分钟，密钥配置在 `application.yml` 的 `token.secret`
 - Spring Security 过滤器链对请求进行统一鉴权
+- **国密替代计划**：后续将逐步以 **SM3（哈希/签名）+ SM4（对称加密）** 替代现有 SHA256/AES 算法体系，敏感数据优先采用 SM4 加密存储
 
 ### 8.2 输入防护
 - **XSS 过滤**：`application.yml` 中 `xss.enabled: true`，对 `/system/*`、`/monitor/*`、`/tool/*` 路径进行过滤
