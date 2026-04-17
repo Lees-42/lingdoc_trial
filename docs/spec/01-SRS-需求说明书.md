@@ -36,6 +36,10 @@
 | **脱敏**    | Desensitization               | 根据正则表达式自动隐藏敏感信息，仅上传脱敏后的内容到 AI 端          |
 | **规整**    | Auto-Organize                 | AI 根据文件内容自动生成规范命名并分类归档的过程 |
 
+### 1.4 文档定位
+
+> **本文档描述灵档的最终产品形态与路线图。** 当前 MVP 阶段的技术实现、目录结构和开发规范以 `docs/ruoyi/` 系列文档及仓库实际代码为准。附录 A 列出了从当前 MVP 到最终架构的适配对照表。
+
 ---
 
 ## 2. 总体描述
@@ -138,8 +142,8 @@ Axios HTTP<br/>localhost:{动态端口}
 - **依赖**: Node.js 18+, JDK 17+, PostgreSQL 12+ (Portable)
 
 **开发环境**:
-- **前端**: Node.js 18, Vue 3.4, Element Plus 2.x, Vite 5.x
-- **后端**: Spring Boot 3.2.x, MyBatis Plus, PostgreSQL 12+
+- **前端**: Node.js 18, Vue 3.5.26, Element Plus 2.13.1, Vite 6.4.1
+- **后端**: Spring Boot 4.0.3, MyBatis 4.0.1, PostgreSQL 12+
 - **工具**: Maven 3.8+, Git 2.30+, Docker (可选)
 
 **生产环境**:
