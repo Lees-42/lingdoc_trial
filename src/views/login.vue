@@ -1,6 +1,9 @@
 <template>
   <div class="login">
     <el-form ref="loginRef" :model="loginForm" :rules="loginRules" class="login-form">
+      <div class="login-brand">
+        <img :src="logo" class="login-brand-logo" alt="LingDoc Logo" />
+      </div>
       <h3 class="title">{{ title }}</h3>
       <el-form-item prop="username">
         <el-input
@@ -70,6 +73,7 @@ import Cookies from "js-cookie"
 import { encrypt, decrypt } from "@/utils/jsencrypt"
 import useUserStore from '@/store/modules/user'
 import defaultSettings from '@/settings'
+import logo from '@/assets/logo/logo.png'
 
 const title = import.meta.env.VITE_APP_TITLE
 const footerContent = defaultSettings.footerContent
@@ -198,6 +202,21 @@ getCookie()
     margin-left: 0px;
   }
 }
+
+.login-brand {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.login-brand-logo {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  border-radius: 18px;
+  box-shadow: 0 10px 24px rgba(15, 77, 168, 0.15);
+}
+
 .login-tip {
   font-size: 13px;
   text-align: center;

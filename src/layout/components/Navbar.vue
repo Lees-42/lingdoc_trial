@@ -30,8 +30,8 @@
 
       <el-dropdown @command="handleCommand" class="avatar-container right-menu-item hover-effect" trigger="hover">
         <div class="avatar-wrapper">
-          <img :src="userStore.avatar" class="user-avatar" />
-          <span class="user-nickname"> {{ userStore.nickName }} </span>
+          <img :src="displayAvatar" class="user-avatar" />
+          <span class="user-nickname"> {{ displayName }} </span>
         </div>
         <template #dropdown>
           <el-dropdown-menu>
@@ -68,6 +68,7 @@ import useAppStore from '@/store/modules/app'
 import useUserStore from '@/store/modules/user'
 import useLockStore from '@/store/modules/lock'
 import useSettingsStore from '@/store/modules/settings'
+import logoAvatar from '@/assets/logo/logo.png'
 
 
 const route = useRoute()
@@ -76,6 +77,8 @@ const appStore = useAppStore()
 const userStore = useUserStore()
 const lockStore = useLockStore()
 const settingsStore = useSettingsStore()
+const displayName = 'LingDoc'
+const displayAvatar = logoAvatar
 
 function toggleSideBar() {
   appStore.toggleSideBar()

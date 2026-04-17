@@ -1,4 +1,6 @@
-﻿-- ----------------------------
+﻿set names utf8mb4;
+
+-- ----------------------------
 -- 1、部门表
 -- ----------------------------
 drop table if exists sys_dept;
@@ -159,8 +161,8 @@ create table sys_menu (
 -- 初始化-菜单信息表数据
 -- ----------------------------
 -- 一级菜单
-insert into sys_menu values('1', '系统设置', '0', '1', 'system',           null, '', '', 1, 0, 'M', '0', '0', '', 'system',   'admin', sysdate(), '', null, '系统管理目录');
-insert into sys_menu values('2', '审计监控', '0', '2', 'monitor',          null, '', '', 1, 0, 'M', '0', '0', '', 'monitor',  'admin', sysdate(), '', null, '系统监控目录');
+insert into sys_menu values('1', '系统设置', '0', '2', 'system',           null, '', '', 1, 0, 'M', '0', '0', '', 'system',   'admin', sysdate(), '', null, '系统管理目录');
+insert into sys_menu values('2', '审计监控', '0', '1', 'monitor',          null, '', '', 1, 0, 'M', '0', '0', '', 'monitor',  'admin', sysdate(), '', null, '系统监控目录');
 -- 二级菜单
 insert into sys_menu values('100',  '用户管理', '1',   '1', 'user',       'system/user/index',        '', '', 1, 0, 'C', '0', '0', 'system:user:list',        'user',          'admin', sysdate(), '', null, '用户管理菜单');
 insert into sys_menu values('105',  '字典管理', '1',   '6', 'dict',       'system/dict/index',        '', '', 1, 0, 'C', '0', '0', 'system:dict:list',        'dict',          'admin', sysdate(), '', null, '字典管理菜单');
@@ -202,11 +204,10 @@ insert into sys_menu values('1041', '日志导出', '500', '3', '#', '', '', '',
 
 -- ----------------------------
 
-insert into sys_menu values('2000', '灵档功能', '0', '1', 'lingdoc', null, '', '', 1, 0, 'M', '0', '0', '', 'dashboard', 'admin', sysdate(), '', null, '灵档功能目录');
-insert into sys_menu values('2001', '自动规整', '2000', '1', 'organize', 'lingdoc/organize/index', '', '', 1, 0, 'C', '0', '0', 'lingdoc:organize:list', 'upload', 'admin', sysdate(), '', null, '自动规整菜单');
-insert into sys_menu values('2002', '智能检索', '2000', '2', 'search', 'lingdoc/search/index', '', '', 1, 0, 'C', '0', '0', 'lingdoc:search:query', 'search', 'admin', sysdate(), '', null, '智能检索菜单');
-insert into sys_menu values('2003', '版本溯源', '2000', '3', 'version', 'lingdoc/version/index', '', '', 1, 0, 'C', '0', '0', 'lingdoc:version:list', 'time', 'admin', sysdate(), '', null, '版本溯源菜单');
-insert into sys_menu values('2004', '表格助手', '2000', '4', 'form', 'lingdoc/form/index', '', '', 1, 0, 'C', '0', '0', 'lingdoc:form:list', 'form', 'admin', sysdate(), '', null, '表格助手菜单');
+insert into sys_menu values('2001', '自动规整', '0', '2', 'lingdoc/organize', 'lingdoc/organize/index', '', '', 1, 0, 'C', '0', '0', 'lingdoc:organize:list', 'upload', 'admin', sysdate(), '', null, '自动规整菜单');
+insert into sys_menu values('2002', '智能检索', '0', '3', 'lingdoc/search', 'lingdoc/search/index', '', '', 1, 0, 'C', '0', '0', 'lingdoc:search:query', 'search', 'admin', sysdate(), '', null, '智能检索菜单');
+insert into sys_menu values('2003', '版本溯源', '0', '4', 'lingdoc/version', 'lingdoc/version/index', '', '', 1, 0, 'C', '0', '0', 'lingdoc:version:list', 'time', 'admin', sysdate(), '', null, '版本溯源菜单');
+insert into sys_menu values('2004', '表格助手', '0', '5', 'lingdoc/form', 'lingdoc/form/index', '', '', 1, 0, 'C', '0', '0', 'lingdoc:form:list', 'form', 'admin', sysdate(), '', null, '表格助手菜单');
 
 -- 6、用户和角色关联表  用户N-1角色
 -- ----------------------------

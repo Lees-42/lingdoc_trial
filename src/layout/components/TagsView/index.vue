@@ -9,8 +9,8 @@
     <scroll-pane ref="scrollPaneRef" class="tags-view-wrapper" @scroll="handleScroll" @update-arrows="updateArrowState">
       <router-link
         v-for="tag in visitedViews"
-        :key="tag.path"
-        :data-path="tag.path"
+        :key="tagKey(tag)"
+        :data-path="tagKey(tag)"
         :class="{ 'active': isActive(tag), 'has-icon': tagsIcon }"
         :to="{ path: tag.path, query: tag.query, fullPath: tag.fullPath }"
         class="tags-view-item"
@@ -19,7 +19,7 @@
         @contextmenu.prevent="openMenu(tag, $event)"
       >
         <svg-icon v-if="tagsIcon && tag.meta && tag.meta.icon && tag.meta.icon !== '#'" :icon-class="tag.meta.icon" style="margin-right: 3px;" />
-        {{ tag.title }}
+        {{ tagTitle(tag) }}
         <span v-if="!isAffix(tag)" @click.prevent.stop="closeSelectedTag(tag)" class="tags-close-btn">
           <close class="el-icon-close" />
         </span>
@@ -151,6 +151,14 @@ function tagActiveStyle(tag) {
 
 function isAffix(tag) {
   return tag && tag.meta && tag.meta.affix
+}
+
+function tagKey(tag) {
+  return tag.fullPath || tag.path || tag.name || ''
+}
+
+function tagTitle(tag) {
+  return tag.title || (tag.meta && tag.meta.title) || (tag.path === '/index' ? '首页' : '') || tag.name || '未命名'
 }
 
 function isFirstView() {

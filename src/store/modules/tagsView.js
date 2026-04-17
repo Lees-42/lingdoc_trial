@@ -3,18 +3,71 @@ import useSettingsStore from '@/store/modules/settings'
 
 const PERSIST_KEY = 'tags-view-visited'
 
+function resolveTitle(view) {
+  if (view && view.meta && view.meta.title) return view.meta.title
+  if (view && view.title) return view.title
+  if (view && view.path === '/index') return '首页'
+  if (view && view.name) return view.name
+  if (view && view.path) return view.path
+  return 'no-name'
+}
+
+function getViewKey(view) {
+  return view.fullPath || view.path || view.name || ''
+}
+
+function normalizeView(view) {
+  const meta = view && view.meta ? { ...view.meta } : {}
+  return {
+    ...view,
+    path: view && view.path ? view.path : '',
+    fullPath: view && view.fullPath ? view.fullPath : (view && view.path) ? view.path : '',
+    name: view && view.name ? view.name : '',
+    query: view && view.query ? view.query : undefined,
+    meta,
+    title: resolveTitle(view)
+  }
+}
+
+function mergeView(currentView, incomingView) {
+  return normalizeView({
+    ...currentView,
+    ...incomingView,
+    meta: {
+      ...(currentView && currentView.meta ? currentView.meta : {}),
+      ...(incomingView && incomingView.meta ? incomingView.meta : {})
+    },
+    title: resolveTitle(incomingView) !== 'no-name' ? resolveTitle(incomingView) : resolveTitle(currentView)
+  })
+}
+
+function normalizeVisitedViews(views) {
+  const normalized = []
+  ;(views || []).forEach(view => {
+    const currentView = normalizeView(view)
+    if (!currentView.path) return
+    const index = normalized.findIndex(item => getViewKey(item) === getViewKey(currentView) || item.path === currentView.path)
+    if (index === -1) {
+      normalized.push(currentView)
+      return
+    }
+    normalized[index] = mergeView(normalized[index], currentView)
+  })
+  return normalized
+}
+
 function isPersistEnabled() {
   return useSettingsStore().tagsViewPersist
 }
 
 function saveVisitedViews(views) {
   if (!isPersistEnabled()) return
-  const toSave = views.filter(v => !(v.meta && v.meta.affix)).map(v => ({ path: v.path, fullPath: v.fullPath, name: v.name, title: v.title, query: v.query, meta: v.meta }))
+  const toSave = normalizeVisitedViews(views).filter(v => !(v.meta && v.meta.affix))
   cache.local.setJSON(PERSIST_KEY, toSave)
 }
 
 function loadVisitedViews() {
-  return cache.local.getJSON(PERSIST_KEY) || []
+  return normalizeVisitedViews(cache.local.getJSON(PERSIST_KEY) || [])
 }
 
 function clearVisitedViews() {
@@ -35,29 +88,32 @@ const useTagsViewStore = defineStore(
         this.addCachedView(view)
       },
       addIframeView(view) {
-        if (this.iframeViews.some(v => v.path === view.path)) return
+        const normalizedView = normalizeView(view)
+        if (this.iframeViews.some(v => v.path === normalizedView.path)) return
         this.iframeViews.push(
-          Object.assign({}, view, {
-            title: view.meta.title || 'no-name'
-          })
+          normalizedView
         )
       },
       addVisitedView(view) {
-        if (this.visitedViews.some(v => v.path === view.path)) return
-        this.visitedViews.push(
-          Object.assign({}, view, {
-            title: view.meta.title || 'no-name'
-          })
-        )
+        const normalizedView = normalizeView(view)
+        if (!normalizedView.path) return
+        const index = this.visitedViews.findIndex(v => getViewKey(v) === getViewKey(normalizedView) || v.path === normalizedView.path)
+        if (index > -1) {
+          this.visitedViews.splice(index, 1, mergeView(this.visitedViews[index], normalizedView))
+          saveVisitedViews(this.visitedViews)
+          return
+        }
+        this.visitedViews.push(normalizedView)
         saveVisitedViews(this.visitedViews)
       },
       addAffixView(view) {
-        if (this.visitedViews.some(v => v.path === view.path)) return
-        this.visitedViews.unshift(
-          Object.assign({}, view, {
-            title: view.meta.title || 'no-name'
-          })
-        )
+        const normalizedView = normalizeView(view)
+        if (!normalizedView.path) return
+        const index = this.visitedViews.findIndex(v => getViewKey(v) === getViewKey(normalizedView) || v.path === normalizedView.path)
+        if (index > -1) {
+          this.visitedViews.splice(index, 1)
+        }
+        this.visitedViews.unshift(normalizedView)
       },
       addCachedView(view) {
         if (this.cachedViews.includes(view.name)) return

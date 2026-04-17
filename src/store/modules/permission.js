@@ -36,12 +36,10 @@ const usePermissionStore = defineStore(
         return new Promise(resolve => {
           // 向后端请求路由数据
           getRouters().then(res => {
-            const sdata = JSON.parse(JSON.stringify(res.data))
-            const rdata = JSON.parse(JSON.stringify(res.data))
-            const defaultData = JSON.parse(JSON.stringify(res.data))
-            const sidebarRoutes = filterAsyncRouter(sdata)
-            const rewriteRoutes = filterAsyncRouter(rdata, false, true)
-            const defaultRoutes = filterAsyncRouter(defaultData)
+            const normalizedData = normalizeLingdocRoutes(JSON.parse(JSON.stringify(res.data)))
+            const sidebarRoutes = filterAsyncRouter(JSON.parse(JSON.stringify(normalizedData)))
+            const rewriteRoutes = filterAsyncRouter(JSON.parse(JSON.stringify(normalizedData)), false, true)
+            const defaultRoutes = filterAsyncRouter(JSON.parse(JSON.stringify(normalizedData)))
             const asyncRoutes = filterDynamicRoutes(dynamicRoutes)
             asyncRoutes.forEach(route => { router.addRoute(route) })
             this.setRoutes(rewriteRoutes)
@@ -94,6 +92,30 @@ function filterChildren(childrenMap, lastRouter = false) {
     }
   })
   return children
+}
+
+function normalizeLingdocRoutes(routes) {
+  const flattenRoutes = []
+  routes.forEach(route => {
+    if (isLingdocParentRoute(route) && route.children && route.children.length) {
+      route.children.forEach(child => {
+        const childPath = (child.path || '').replace(/^\//, '')
+        flattenRoutes.push({
+          ...child,
+          path: '/lingdoc/' + childPath
+        })
+      })
+    } else {
+      flattenRoutes.push(route)
+    }
+  })
+  return flattenRoutes
+}
+
+function isLingdocParentRoute(route) {
+  const routePath = (route.path || '').replace(/^\//, '')
+  const routeTitle = route.meta && route.meta.title ? route.meta.title : ''
+  return routePath === 'lingdoc' || routeTitle === '灵档功能'
 }
 
 // 动态路由遍历，验证是否具备权限
