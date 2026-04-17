@@ -89,6 +89,38 @@ export const constantRoutes = [
         meta: { title: '个人中心', icon: 'user' }
       }
     ]
+  },
+  {
+    path: '/lingdoc',
+    component: Layout,
+    redirect: 'noredirect',
+    alwaysShow: true,
+    children: [
+      {
+        path: 'organize',
+        component: () => import('@/views/lingdoc/organize/index'),
+        name: 'Organize',
+        meta: { title: '自动规整', icon: 'upload' }
+      },
+      {
+        path: 'search',
+        component: () => import('@/views/lingdoc/search/index'),
+        name: 'Search',
+        meta: { title: '智能检索', icon: 'search' }
+      },
+      {
+        path: 'version',
+        component: () => import('@/views/lingdoc/version/index'),
+        name: 'Version',
+        meta: { title: '版本溯源', icon: 'time' }
+      },
+      {
+        path: 'form',
+        component: () => import('@/views/lingdoc/form/index'),
+        name: 'Form',
+        meta: { title: '表格助手', icon: 'form' }
+      }
+    ]
   }
 ]
 
