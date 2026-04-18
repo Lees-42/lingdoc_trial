@@ -90,39 +90,7 @@ export const constantRoutes = [
       }
     ]
   },
-  {
-    path: '/lingdoc',
-    component: Layout,
-    redirect: '/lingdoc/organize',
-    alwaysShow: true,
-    meta: { title: '灵档', icon: 'lingdoc' },
-    children: [
-      {
-        path: 'organize',
-        component: () => import('@/views/lingdoc/organize/index'),
-        name: 'Organize',
-        meta: { title: '自动规整', icon: 'upload' }
-      },
-      {
-        path: 'search',
-        component: () => import('@/views/lingdoc/search/index'),
-        name: 'Search',
-        meta: { title: '智能检索', icon: 'search' }
-      },
-      {
-        path: 'form',
-        component: () => import('@/views/lingdoc/form/index'),
-        name: 'Form',
-        meta: { title: '表格助手', icon: 'form' }
-      },
-      {
-        path: 'version',
-        component: () => import('@/views/lingdoc/version/index'),
-        name: 'Version',
-        meta: { title: '版本溯源', icon: 'time' }
-      }
-    ]
-  }
+
 ]
 
 // 动态路由，基于用户权限动态去加载

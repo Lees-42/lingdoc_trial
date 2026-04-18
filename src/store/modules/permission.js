@@ -95,21 +95,18 @@ function filterChildren(childrenMap, lastRouter = false) {
 }
 
 function normalizeLingdocRoutes(routes) {
-  const flattenRoutes = []
-  routes.forEach(route => {
+  return routes.map(route => {
     if (isLingdocParentRoute(route) && route.children && route.children.length) {
-      route.children.forEach(child => {
-        const childPath = (child.path || '').replace(/^\//, '')
-        flattenRoutes.push({
+      return {
+        ...route,
+        children: route.children.map(child => ({
           ...child,
-          path: '/lingdoc/' + childPath
-        })
-      })
-    } else {
-      flattenRoutes.push(route)
+          path: '/lingdoc/' + (child.path || '').replace(/^\//, '')
+        }))
+      }
     }
+    return route
   })
-  return flattenRoutes
 }
 
 function isLingdocParentRoute(route) {
