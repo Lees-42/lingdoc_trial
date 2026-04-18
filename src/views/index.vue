@@ -7,7 +7,7 @@
         <p class="brand-slogan">让文档回到本地，让每一次整理、检索与回溯都更清晰、更可控。</p>
         <div class="hero-actions">
           <el-button class="main-btn" type="primary" round @click="navigate('/lingdoc/organize')">进入自动规整</el-button>
-          <el-button class="main-btn main-btn--ghost" round @click="navigate('/lingdoc/search')">打开智能检索</el-button>
+          <el-button class="main-btn main-btn--ghost" round @click="navigate('/lingdoc/search')">打开灵犀问答</el-button>
         </div>
       </div>
       <div class="hero-signal">
@@ -157,7 +157,7 @@ const quickActions = [
     description: '把零散素材整理成稳定结构，减少后续查找成本。'
   },
   {
-    title: '智能检索',
+    title: '灵犀问答',
     tag: '搜索',
     icon: 'search',
     path: '/lingdoc/search',
@@ -171,11 +171,11 @@ const quickActions = [
     description: '查看文档变更脉络，保留整理前后的信息连续性。'
   },
   {
-    title: '表格助手',
-    tag: '辅助',
+    title: '关系图谱',
+    tag: '可视化',
     icon: 'form',
     path: '/lingdoc/form',
-    description: '面向表格类任务提供更轻的填报与处理入口。'
+    description: '探索本地文件间的隐性关联网络，发现数据孤岛与核心枢纽。'
   }
 ]
 

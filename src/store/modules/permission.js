@@ -36,7 +36,9 @@ const usePermissionStore = defineStore(
         return new Promise(resolve => {
           // 向后端请求路由数据
           getRouters().then(res => {
-            const normalizedData = normalizeLingdocRoutes(JSON.parse(JSON.stringify(res.data)))
+            renameMenuTitle(res.data, '智能检索', '灵犀问答')
+            renameMenuTitle(res.data, '表格助手', '关系图谱')
+            const normalizedData = res.data
             const sidebarRoutes = filterAsyncRouter(JSON.parse(JSON.stringify(normalizedData)))
             const rewriteRoutes = filterAsyncRouter(JSON.parse(JSON.stringify(normalizedData)), false, true)
             const defaultRoutes = filterAsyncRouter(JSON.parse(JSON.stringify(normalizedData)))
@@ -94,27 +96,6 @@ function filterChildren(childrenMap, lastRouter = false) {
   return children
 }
 
-function normalizeLingdocRoutes(routes) {
-  return routes.map(route => {
-    if (isLingdocParentRoute(route) && route.children && route.children.length) {
-      return {
-        ...route,
-        children: route.children.map(child => ({
-          ...child,
-          path: '/lingdoc/' + (child.path || '').replace(/^\//, '')
-        }))
-      }
-    }
-    return route
-  })
-}
-
-function isLingdocParentRoute(route) {
-  const routePath = (route.path || '').replace(/^\//, '')
-  const routeTitle = route.meta && route.meta.title ? route.meta.title : ''
-  return routePath === 'lingdoc' || routeTitle === '灵档功能'
-}
-
 // 动态路由遍历，验证是否具备权限
 export function filterDynamicRoutes(routes) {
   const res = []
@@ -141,6 +122,19 @@ export const loadView = (view) => {
     }
   }
   return res
+}
+
+// 递归替换路由菜单名称
+function renameMenuTitle(routes, oldName, newName) {
+  if (!routes) return
+  routes.forEach(route => {
+    if (route.meta && route.meta.title === oldName) {
+      route.meta.title = newName
+    }
+    if (route.children) {
+      renameMenuTitle(route.children, oldName, newName)
+    }
+  })
 }
 
 export default usePermissionStore

@@ -204,10 +204,12 @@ insert into sys_menu values('1041', '日志导出', '500', '3', '#', '', '', '',
 
 -- ----------------------------
 
-insert into sys_menu values('2001', '自动规整', '0', '2', 'lingdoc/organize', 'lingdoc/organize/index', '', '', 1, 0, 'C', '0', '0', 'lingdoc:organize:list', 'upload', 'admin', sysdate(), '', null, '自动规整菜单');
-insert into sys_menu values('2002', '智能检索', '0', '3', 'lingdoc/search', 'lingdoc/search/index', '', '', 1, 0, 'C', '0', '0', 'lingdoc:search:query', 'search', 'admin', sysdate(), '', null, '智能检索菜单');
-insert into sys_menu values('2003', '版本溯源', '0', '4', 'lingdoc/version', 'lingdoc/version/index', '', '', 1, 0, 'C', '0', '0', 'lingdoc:version:list', 'time', 'admin', sysdate(), '', null, '版本溯源菜单');
-insert into sys_menu values('2004', '表格助手', '0', '5', 'lingdoc/form', 'lingdoc/form/index', '', '', 1, 0, 'C', '0', '0', 'lingdoc:form:list', 'form', 'admin', sysdate(), '', null, '表格助手菜单');
+insert into sys_menu values('2000', '灵档', '0', '3', 'lingdoc', null, '', '', 1, 0, 'M', '0', '0', '', 'lingdoc', 'admin', sysdate(), '', null, '灵档功能目录');
+
+insert into sys_menu values('2001', '自动规整', '2000', '1', 'organize', 'lingdoc/organize/index', '', '', 1, 0, 'C', '0', '0', 'lingdoc:organize:list', 'upload', 'admin', sysdate(), '', null, '自动规整菜单');
+insert into sys_menu values('2002', '智能检索', '2000', '2', 'search', 'lingdoc/search/index', '', '', 1, 0, 'C', '0', '0', 'lingdoc:search:query', 'search', 'admin', sysdate(), '', null, '智能检索菜单');
+insert into sys_menu values('2003', '版本溯源', '2000', '3', 'version', 'lingdoc/version/index', '', '', 1, 0, 'C', '0', '0', 'lingdoc:version:list', 'time', 'admin', sysdate(), '', null, '版本溯源菜单');
+insert into sys_menu values('2004', '关系图谱', '2000', '4', 'form', 'lingdoc/form/index', '', '', 1, 0, 'C', '0', '0', 'lingdoc:form:list', 'form', 'admin', sysdate(), '', null, '关系图谱菜单');
 
 -- 6、用户和角色关联表  用户N-1角色
 -- ----------------------------
