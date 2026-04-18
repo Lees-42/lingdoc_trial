@@ -15,13 +15,13 @@ axios.defaults.headers['Content-Type'] = 'application/json;charset=utf-8'
 // 创建axios实例
 const service = axios.create({
   // axios中请求配置有baseURL选项，表示请求URL公共部分
-  baseURL: import.meta.env.VITE_APP_BASE_API,
-  // 超时
-  timeout: 10000
+  baseURL: import.meta.env.VITE_APP_BASE_API
 })
 
 // request拦截器
 service.interceptors.request.use(config => {
+  // 超时时间支持按请求覆盖，默认10s
+  config.timeout = config.timeout || 10000
   // 是否需要设置 token
   const isToken = (config.headers || {}).isToken === false
   // 是否需要防止数据重复提交
@@ -147,6 +147,66 @@ export function download(url, params, filename, config) {
     console.error(r)
     ElMessage.error('下载文件出现错误，请联系管理员！')
     downloadLoadingInstance.close()
+  })
+}
+
+/**
+ * SSE 流式请求封装（用于 AI 对话等流式输出场景）
+ * 使用浏览器原生 fetch + ReadableStream，而非 Axios
+ * @param {string} url 请求路径（不含 baseURL，自动拼接 VITE_APP_BASE_API）
+ * @param {object} data 请求体（JSON）
+ * @param {function} onMessage 收到每条消息时的回调 (data) => {}
+ * @param {function} onError 发生错误时的回调 (error) => {}
+ * @param {function} onDone 流结束时的回调 () => {}
+ * @returns {Promise<void>}
+ */
+export function streamRequest(url, data, onMessage, onError, onDone) {
+  const baseURL = import.meta.env.VITE_APP_BASE_API
+  const fullUrl = baseURL + url
+  const token = getToken()
+
+  return fetch(fullUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json;charset=utf-8',
+      'Accept': 'text/event-stream',
+      ...(token ? { 'Authorization': 'Bearer ' + token } : {})
+    },
+    body: JSON.stringify(data)
+  }).then(response => {
+    if (!response.ok) {
+      throw new Error('HTTP ' + response.status)
+    }
+    const reader = response.body.getReader()
+    const decoder = new TextDecoder('utf-8')
+    let buffer = ''
+
+    const read = () => {
+      return reader.read().then(({ done, value }) => {
+        if (done) {
+          onDone && onDone()
+          return
+        }
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop()
+        lines.forEach(line => {
+          if (line.startsWith('data: ')) {
+            const content = line.slice(6)
+            if (content === '[DONE]') {
+              onDone && onDone()
+            } else {
+              onMessage && onMessage(content)
+            }
+          }
+        })
+        return read()
+      })
+    }
+    return read()
+  }).catch(error => {
+    console.error('[streamRequest] error:', error)
+    onError && onError(error)
   })
 }
 
