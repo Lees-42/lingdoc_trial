@@ -12,7 +12,7 @@ import Layout from '@/layout'
  *                                  // 你可以设置 alwaysShow: true，这样它就会忽略之前定义的规则，一直显示根路由
  * redirect: noRedirect             // 当设置 noRedirect 的时候该路由在面包屑导航中不可被点击
  * name:'router-name'               // 设定路由的名字，一定要填写不然使用<keep-alive>时会出现各种问题
- * query: '{"id": 1, "name": "ry"}' // 访问路由的默认传递参数
+ * query: '{"id": 1, "name": "ld"}' // 访问路由的默认传递参数
  * roles: ['admin', 'common']       // 访问路由的角色权限
  * permissions: ['a:a:a', 'b:b:b']  // 访问路由的菜单权限
  * meta : {
@@ -89,6 +89,39 @@ export const constantRoutes = [
         meta: { title: '个人中心', icon: 'user' }
       }
     ]
+  },
+  {
+    path: '/lingdoc',
+    component: Layout,
+    redirect: '/lingdoc/organize',
+    alwaysShow: true,
+    meta: { title: '灵档', icon: 'lingdoc' },
+    children: [
+      {
+        path: 'organize',
+        component: () => import('@/views/lingdoc/organize/index'),
+        name: 'Organize',
+        meta: { title: '自动规整', icon: 'upload' }
+      },
+      {
+        path: 'search',
+        component: () => import('@/views/lingdoc/search/index'),
+        name: 'Search',
+        meta: { title: '智能检索', icon: 'search' }
+      },
+      {
+        path: 'form',
+        component: () => import('@/views/lingdoc/form/index'),
+        name: 'Form',
+        meta: { title: '表格助手', icon: 'form' }
+      },
+      {
+        path: 'version',
+        component: () => import('@/views/lingdoc/version/index'),
+        name: 'Version',
+        meta: { title: '版本溯源', icon: 'time' }
+      }
+    ]
   }
 ]
 
@@ -114,6 +147,7 @@ const router = createRouter({
   history: createWebHistory(),
   routes: constantRoutes,
   scrollBehavior(to, from, savedPosition) {
+    // 如果 savedPosition 存在，说明是浏览器的前进/后退按钮触发的导航，返回 savedPosition 以保持滚动位置不变
     if (savedPosition) {
       return savedPosition
     }

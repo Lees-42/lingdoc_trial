@@ -11,7 +11,7 @@ export default defineConfig(({ mode, command }) => {
   return {
     // 部署生产环境和开发环境下的URL。
     // 默认情况下，vite 会假设你的应用是被部署在一个域名的根路径上
-    // 例如 https://www.ruoyi.vip/。如果应用被部署在一个子路径上，你就需要用这个选项指定这个子路径。例如，如果你的应用被部署在 https://www.ruoyi.vip/admin/，则设置 baseUrl 为 /admin/。
+    // 例如 https://www.lingdoc.vip/。如果应用被部署在一个子路径上，你就需要用这个选项指定这个子路径。例如，如果你的应用被部署在 https://www.lingdoc.vip/admin/，则设置 baseUrl 为 /admin/。
     base: VITE_APP_ENV === 'production' ? '/' : '/',
     plugins: createVitePlugins(env, command === 'build'),
     resolve: {
@@ -23,28 +23,28 @@ export default defineConfig(({ mode, command }) => {
         '@': path.resolve(__dirname, './src')
       },
       // https://cn.vitejs.dev/config/#resolve-extensions
-      extensions: ['.mjs', '.js', '.ts', '.jsx', '.tsx', '.json', '.vue']
+      extensions: ['.mjs', '.js', '.ts', '.jsx', '.tsx', '.json', '.vue'] // 模块解析扩展名设置
     },
     // 打包配置
     build: {
       // https://vite.dev/config/build-options.html
-      sourcemap: command === 'build' ? false : 'inline',
-      outDir: 'dist',
-      assetsDir: 'assets',
+      sourcemap: command === 'build' ? false : 'inline', // 源码映射
+      outDir: 'dist', // 输出目录
+      assetsDir: 'assets', // 静态资源目录(dist/assets)
       chunkSizeWarningLimit: 2000,
-      rollupOptions: {
+      rollupOptions: { // 打包选项
         output: {
           chunkFileNames: 'static/js/[name]-[hash].js',
           entryFileNames: 'static/js/[name]-[hash].js',
-          assetFileNames: 'static/[ext]/[name]-[hash].[ext]'
+          assetFileNames: 'static/[ext]/[name]-[hash].[ext]' // 静态资源文件名
         }
       }
     },
-    // vite 相关配置
+    // 配置 Vite 开发服务器
     server: {
       port: 80,
-      host: true,
-      open: true,
+      host: false, // 不允许外部访问
+      open: true, // 自动打开浏览器
       proxy: {
         // https://cn.vitejs.dev/config/#server-proxy
         '/dev-api': {
