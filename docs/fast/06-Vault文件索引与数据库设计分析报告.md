@@ -51,7 +51,7 @@
          ┌───────────────────────┴───────────────────────┐
          │                                               │
     Vault 物理目录（文件系统）                      Vault 物理目录（文件系统）
-    /documents/学习资料/...                        /versions/ /desensitized/
+    /documents/学习资料/...                        /versions/ /temp/
 ```
 
 ### 2.2 功能受阻分析
@@ -62,7 +62,7 @@
 | **关系图谱展示真实文件** | 无 | Vault 文件索引 + 标签字段 | 只能使用 mock 数据，无法接入真实文件 |
 | **自动规整功能归档文件** | 无 | `file_index` 表记录归档信息 | AI 规整后文件存入 Vault，但数据库无记录，后续无法检索 |
 | **版本溯源** | 无 | `file_version` 表 | 无法记录版本快照的元数据 |
-| **全文检索** | `kb_chunk` 表（仅知识库分块） | Vault 文件的 OCR 文本索引 | 只能检索知识库内容，Vault 普通文件无法被搜索 |
+| **全文检索** | `kb_chunk` 表（仅知识库分块） | Vault 文件的文本内容索引 | 只能检索知识库内容，Vault 普通文件无法被搜索 |
 | **重复文件检测** | 无 | checksum 索引 | 无法快速判断文件是否已存在 |
 
 ---
@@ -82,14 +82,13 @@
 | `file_name` | varchar(256) | 文件名 | ✅ |
 | `vault_path` | varchar(512) | Vault 内相对路径 | ✅ |
 | `abs_path` | varchar(512) | 绝对路径 | ✅ |
-| `file_type` | varchar(32) | 文件类型（pdf/docx/xlsx等） | ✅ |
+| `file_type` | varchar(32) | 文件类型（txt/md/csv/json/xml/yaml） | ✅ |
 | `file_size` | bigint | 文件大小 | ✅ |
 | `checksum` | varchar(64) | MD5/SHA256（去重用） | ✅ |
 | `tag` | varchar(128) | 一级目录标签（学习资料/申请材料/工作文档） | ✅ |
 | `sub_path` | varchar(512) | 子分类路径 | ⚪ |
 | `source_type` | char(1) | 来源：0手动上传 1自动规整 2表格助手生成 | ✅ |
-| `ocr_text` | longtext | OCR/解析后的文本内容 | ✅ |
-| `is_desensitized` | char(1) | 是否有脱敏副本 | ⚪ |
+| `file_content` | longtext | 文件文本内容（全文检索用） | ✅ |
 | `create_time` | datetime | 创建时间 | ✅ |
 | `update_time` | datetime | 更新时间 | ✅ |
 
@@ -98,7 +97,7 @@
 - 普通索引：`user_id`, `file_type`, `tag`, `checksum`, `source_type`
 - 联合索引：`(user_id, tag)`, `(user_id, file_type, create_time)`
 - 唯一索引：`(user_id, checksum)` — 同用户下文件去重
-- 全文索引：`file_name` (FULLTEXT ngram), `ocr_text` (FULLTEXT ngram)
+- 全文索引：`file_name` (FULLTEXT ngram), `file_content` (FULLTEXT ngram)
 
 #### 表B：`lingdoc_file_version`（文件版本记录表）
 
@@ -181,7 +180,7 @@ ADD KEY `idx_file_index_id` (`file_index_id`);
 |------|--------------------------|---------|
 | 当前：遍历文件系统 | ~200ms ~ 2s | `File.listFiles()` 递归遍历 |
 | 当前：仅查 `kb_document` | ~10ms | 但只能覆盖知识库文档 |
-| **优化后：查 `lingdoc_file_index`** | **~5ms** | `SELECT ... WHERE user_id=? AND MATCH(file_name,ocr_text) AGAINST(?)` |
+| **优化后：查 `lingdoc_file_index`** | **~5ms** | `SELECT ... WHERE user_id=? AND MATCH(file_name,file_content) AGAINST(?)` |
 
 ### 4.2 关系图谱标签提取
 
@@ -195,7 +194,7 @@ ADD KEY `idx_file_index_id` (`file_index_id`);
 | 方案 | 检索范围 | 响应时间 |
 |------|---------|---------|
 | 当前：`kb_chunk` 表 | 仅知识库文档的分块 | ~50ms |
-| **优化后：`file_index` OCR 全文索引** | **Vault 中所有文件的 OCR 文本** | **~50ms（同等性能，范围扩大）** |
+| **优化后：`file_index` 全文索引** | **Vault 中所有文件的文本内容** | **~50ms（同等性能，范围扩大）** |
 
 ---
 
