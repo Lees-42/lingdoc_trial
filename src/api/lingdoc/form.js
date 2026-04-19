@@ -1,11 +1,21 @@
 import request from '@/utils/request'
 
-// 查询关系图谱列表（原表格助手，已迁移为可视化图谱）
+// ==================== 任务管理 ====================
+
+// 查询表格填写任务列表
 export function listForm(query) {
   return request({
     url: '/lingdoc/form/list',
     method: 'get',
     params: query
+  })
+}
+
+// 获取任务详情
+export function getFormTask(taskId) {
+  return request({
+    url: '/lingdoc/form/' + taskId,
+    method: 'get'
   })
 }
 
@@ -17,65 +27,75 @@ export function uploadForm(data) {
     data: data,
     headers: {
       'Content-Type': 'multipart/form-data'
-    }
+    },
+    timeout: 60000
   })
 }
 
-// 获取 AI 字段识别结果
-export function getFormFields(fileId) {
+// 修改任务
+export function updateForm(data) {
   return request({
-    url: '/lingdoc/form/fields/' + fileId,
-    method: 'get'
-  })
-}
-
-// 获取信息源匹配结果
-export function getFormSuggestions(fileId) {
-  return request({
-    url: '/lingdoc/form/suggestions/' + fileId,
-    method: 'get'
-  })
-}
-
-// 确认生成填写好的表格
-export function confirmForm(data) {
-  return request({
-    url: '/lingdoc/form/confirm',
-    method: 'post',
+    url: '/lingdoc/form',
+    method: 'put',
     data: data
   })
 }
 
-// 批量确认生成
-export function batchConfirmForm(data) {
+// 删除任务
+export function delForm(taskId) {
   return request({
-    url: '/lingdoc/form/batchConfirm',
-    method: 'post',
-    data: data
-  })
-}
-
-// 删除表格记录
-export function delForm(fileId) {
-  return request({
-    url: '/lingdoc/form/' + fileId,
+    url: '/lingdoc/form/' + taskId,
     method: 'delete'
   })
 }
 
 // 批量删除
-export function batchDelForm(fileIds) {
+export function batchDelForm(taskIds) {
   return request({
     url: '/lingdoc/form/batch',
     method: 'delete',
-    data: fileIds
+    data: taskIds
   })
 }
 
-// 清空列表
-export function cleanForm() {
+// ==================== 字段管理 ====================
+
+// 批量更新字段值
+export function updateFormFields(data) {
   return request({
-    url: '/lingdoc/form/clean',
-    method: 'delete'
+    url: '/lingdoc/form/fields',
+    method: 'put',
+    data: data
+  })
+}
+
+// ==================== 生成与下载 ====================
+
+// 触发AI生成
+export function generateForm(data) {
+  return request({
+    url: '/lingdoc/form/generate',
+    method: 'post',
+    data: data,
+    timeout: 120000
+  })
+}
+
+// 下载填写后文档
+export function downloadForm(taskId) {
+  return request({
+    url: '/lingdoc/form/download/' + taskId,
+    method: 'get',
+    responseType: 'blob'
+  })
+}
+
+// ==================== 参考文档 ====================
+
+// 获取参考文档列表
+export function getFormReferences(taskId) {
+  return request({
+    url: '/lingdoc/form/references/' + taskId,
+    method: 'get'
   })
 }
