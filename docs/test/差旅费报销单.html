@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>差旅费报销单</title>
+  <style>
+    body { font-family: "Microsoft YaHei", SimSun, serif; margin: 40px; background: #f5f5f5; }
+    .form-container { max-width: 700px; margin: 0 auto; background: #fff; padding: 40px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    h1 { text-align: center; font-size: 22px; margin-bottom: 10px; }
+    .form-no { text-align: right; font-size: 12px; color: #666; margin-bottom: 20px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { border: 1px solid #333; padding: 8px 10px; text-align: center; vertical-align: middle; }
+    th { background: #f5f5f5; font-weight: normal; }
+    .blank { color: #ccc; font-style: italic; }
+    .left { text-align: left; }
+    .total-row { font-weight: bold; background: #fafafa; }
+    .sign-row td { text-align: left; height: 60px; vertical-align: bottom; padding-bottom: 20px; }
+    .stamp-box { width: 100px; height: 100px; border: 2px dashed #ccc; margin: 10px auto; display: flex; align-items: center; justify-content: center; color: #ccc; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="form-container">
+    <h1>差旅费报销单</h1>
+    <div class="form-no">单据编号：<span class="blank">[待填写]</span></div>
+    <table>
+      <tr>
+        <th>报销人</th>
+        <td class="blank">[待填写]</td>
+        <th>所属部门</th>
+        <td class="blank">[待填写]</td>
+        <th>报销日期</th>
+        <td class="blank">[待填写]</td>
+      </tr>
+      <tr>
+        <th>出差事由</th>
+        <td colspan="5" class="left blank">[待填写：请简述出差目的及事项]</td>
+      </tr>
+      <tr>
+        <th>出差地点</th>
+        <td colspan="2" class="blank">[待填写]</td>
+        <th>出差天数</th>
+        <td colspan="2" class="blank">[待填写]</td>
+      </tr>
+      <tr style="background:#f0f0f0;font-weight:bold;">
+        <th>费用类型</th>
+        <th>出发日期</th>
+        <th>返回日期</th>
+        <th>票据张数</th>
+        <th>金额（元）</th>
+        <th>备注</th>
+      </tr>
+      <tr>
+        <td>交通费</td>
+        <td class="blank">[待填写]</td>
+        <td class="blank">[待填写]</td>
+        <td class="blank">[待填写]</td>
+        <td class="blank">[待填写]</td>
+        <td class="blank">[待填写]</td>
+      </tr>
+      <tr>
+        <td>住宿费</td>
+        <td class="blank">[待填写]</td>
+        <td class="blank">[待填写]</td>
+        <td class="blank">[待填写]</td>
+        <td class="blank">[待填写]</td>
+        <td class="blank">[待填写]</td>
+      </tr>
+      <tr>
+        <td>餐饮费</td>
+        <td class="blank">[待填写]</td>
+        <td class="blank">[待填写]</td>
+        <td class="blank">[待填写]</td>
+        <td class="blank">[待填写]</td>
+        <td class="blank">[待填写]</td>
+      </tr>
+      <tr>
+        <td>其他费用</td>
+        <td class="blank">[待填写]</td>
+        <td class="blank">[待填写]</td>
+        <td class="blank">[待填写]</td>
+        <td class="blank">[待填写]</td>
+        <td class="blank">[待填写]</td>
+      </tr>
+      <tr class="total-row">
+        <td colspan="4">合计金额（大写）</td>
+        <td colspan="2" class="blank">[待填写]</td>
+      </tr>
+      <tr class="sign-row">
+        <td colspan="3">
+          报销人签字：<span class="blank">[待填写]</span>
+        </td>
+        <td colspan="3">
+          部门负责人签字：<span class="blank">[待填写]</span>
+        </td>
+      </tr>
+      <tr class="sign-row">
+        <td colspan="3">
+          财务审核：<span class="blank">[待填写]</span>
+        </td>
+        <td colspan="3">
+          <div class="stamp-box">财务专用章</div>
+        </td>
+      </tr>
+    </table>
+  </div>
+</body>
+</html>
