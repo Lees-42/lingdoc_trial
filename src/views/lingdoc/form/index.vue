@@ -9,6 +9,9 @@
         </el-tag>
       </div>
       <div class="toolbar-right">
+        <el-button type="warning" :icon="View" @click="loadDemoData">
+          加载演示
+        </el-button>
         <el-button type="primary" :icon="Upload" @click="showUploadDialog = true">
           上传表格
         </el-button>
@@ -61,61 +64,76 @@
         </div>
       </div>
 
-      <!-- 字段编辑面板 -->
+      <!-- 字段编辑面板（可折叠） -->
       <div class="field-editor-panel">
-        <div class="panel-header">
+        <div class="panel-header" style="cursor: pointer;" @click="isFieldPanelCollapsed = !isFieldPanelCollapsed">
           <span class="panel-title">📝 字段确认</span>
           <div class="panel-actions">
             <el-text type="info">共 {{ fields.length }} 个字段，已确认 {{ confirmedCount }} 个</el-text>
-            <el-button type="primary" size="small" :disabled="!hasUnconfirmedFields" @click="confirmAllHighConfidence">
+            <el-button type="primary" size="small" :disabled="!hasUnconfirmedFields" @click.stop="confirmAllHighConfidence">
               一键确认高置信度字段（≥80%）
             </el-button>
+            <el-icon :size="16" class="collapse-icon" :class="{ 'is-collapsed': isFieldPanelCollapsed }">
+              <ArrowDown v-if="!isFieldPanelCollapsed" />
+              <ArrowUp v-else />
+            </el-icon>
           </div>
         </div>
-        <div class="panel-body">
-          <el-table :data="fields" border size="small" style="width: 100%">
+        <div v-show="!isFieldPanelCollapsed" class="panel-body">
+          <el-table
+            :data="fields"
+            border
+            size="small"
+            style="width: 100%"
+            :row-class-name="rowClassName"
+          >
             <el-table-column type="index" width="50" align="center" />
             <el-table-column prop="fieldName" label="字段名称" width="120" />
-            <el-table-column prop="fieldType" label="类型" width="80">
+            <el-table-column prop="fieldType" label="字段类型" width="90">
               <template #default="{ row }">
                 <el-tag size="small" :type="fieldTypeTag(row.fieldType)">
                   {{ fieldTypeText(row.fieldType) }}
                 </el-tag>
               </template>
             </el-table-column>
-            <el-table-column prop="aiValue" label="AI 建议值" width="180">
+            <el-table-column prop="aiValue" label="AI 建议值" min-width="140">
               <template #default="{ row }">
-                <div class="ai-value-cell">
-                  <span>{{ row.aiValue || '-' }}</span>
-                  <el-tag v-if="row.confidence" size="small" :type="confidenceTag(row.confidence)">
-                    {{ (row.confidence * 100).toFixed(0) }}%
-                  </el-tag>
+                <span>{{ row.aiValue || '-' }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="confidence" label="置信度" width="90" align="center">
+              <template #default="{ row }">
+                <el-tag v-if="row.confidence !== undefined && row.confidence !== null" size="small" :type="confidenceTag(row.confidence)">
+                  {{ (row.confidence * 100).toFixed(0) }}%
+                </el-tag>
+                <span v-else>-</span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="userValue" label="用户确认" min-width="220">
+              <template #default="{ row }">
+                <div class="user-value-cell">
+                  <el-input
+                    v-model="row.userValue"
+                    size="small"
+                    :placeholder="row.aiValue || '请输入...'"
+                    clearable
+                    @change="handleFieldChange(row)"
+                  />
+                  <el-tooltip :content="row.isConfirmed === '1' ? '已确认' : '点击确认'" placement="top">
+                    <el-button
+                      text
+                      circle
+                      size="small"
+                      :type="row.isConfirmed === '1' ? 'success' : 'info'"
+                      @click="toggleFieldConfirm(row)"
+                    >
+                      <el-icon><Check /></el-icon>
+                    </el-button>
+                  </el-tooltip>
                 </div>
               </template>
             </el-table-column>
-            <el-table-column prop="userValue" label="用户确认值" min-width="200">
-              <template #default="{ row }">
-                <el-input
-                  v-model="row.userValue"
-                  size="small"
-                  :placeholder="row.aiValue || '请输入...'"
-                  clearable
-                  @change="handleFieldChange(row)"
-                />
-              </template>
-            </el-table-column>
-            <el-table-column prop="isConfirmed" label="状态" width="80" align="center">
-              <template #default="{ row }">
-                <el-switch
-                  v-model="row.isConfirmed"
-                  active-value="1"
-                  inactive-value="0"
-                  size="small"
-                  @change="handleFieldChange(row)"
-                />
-              </template>
-            </el-table-column>
-            <el-table-column prop="sourceDocName" label="来源文档" width="150" show-overflow-tooltip />
+            <el-table-column prop="sourceDocName" label="来源文档" width="140" show-overflow-tooltip />
           </el-table>
         </div>
       </div>
@@ -168,14 +186,18 @@
         <el-button type="primary" :icon="Upload" @click="showUploadDialog = true">
           上传表格文件
         </el-button>
+        <el-divider />
+        <el-button type="warning" :icon="View" @click="loadDemoData">
+          加载演示数据
+        </el-button>
       </el-empty>
     </div>
 
     <!-- 上传对话框 -->
     <el-dialog v-model="showUploadDialog" title="上传空白表格" width="500px" destroy-on-close>
-      <el-form :model="uploadForm" label-width="80px">
+      <el-form :model="uploadData" label-width="80px">
         <el-form-item label="任务名称">
-          <el-input v-model="uploadForm.taskName" placeholder="留空将使用文件名作为任务名称" />
+          <el-input v-model="uploadData.taskName" placeholder="留空将使用文件名作为任务名称" />
         </el-form-item>
         <el-form-item label="表格文件">
           <el-upload
@@ -207,7 +229,7 @@
 <script setup name="FormAssistant">
 import { ref, computed, reactive } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Upload, Document, MagicStick, Download, Refresh } from '@element-plus/icons-vue'
+import { Upload, Document, MagicStick, Download, Refresh, Check, ArrowDown, ArrowUp, View } from '@element-plus/icons-vue'
 import { uploadForm, getFormTask, updateFormFields, generateForm, downloadForm } from '@/api/lingdoc/form'
 
 // ========== 状态 ==========
@@ -218,9 +240,10 @@ const showUploadDialog = ref(false)
 const uploading = ref(false)
 const generating = ref(false)
 const uploadRef = ref(null)
-const uploadForm = reactive({ taskName: '', file: null })
+const uploadData = reactive({ taskName: '', file: null })
 const originalFileUrl = ref('')
 const filledFileUrl = ref('')
+const isFieldPanelCollapsed = ref(false)
 
 // ========== 计算属性 ==========
 const statusText = computed(() => {
@@ -250,7 +273,7 @@ const canDownload = computed(() => {
 // ========== 方法 ==========
 
 function handleFileChange(file) {
-  uploadForm.file = file.raw
+  uploadData.file = file.raw
 }
 
 function handleExceed() {
@@ -258,16 +281,16 @@ function handleExceed() {
 }
 
 async function submitUpload() {
-  if (!uploadForm.file) {
+  if (!uploadData.file) {
     ElMessage.warning('请选择文件')
     return
   }
   uploading.value = true
   try {
     const formData = new FormData()
-    formData.append('file', uploadForm.file)
-    if (uploadForm.taskName) {
-      formData.append('taskName', uploadForm.taskName)
+    formData.append('file', uploadData.file)
+    if (uploadData.taskName) {
+      formData.append('taskName', uploadData.taskName)
     }
     const res = await uploadForm(formData)
     if (res.code === 200) {
@@ -282,8 +305,8 @@ async function submitUpload() {
     ElMessage.error('上传失败：' + e.message)
   } finally {
     uploading.value = false
-    uploadForm.taskName = ''
-    uploadForm.file = null
+    uploadData.taskName = ''
+    uploadData.file = null
     uploadRef.value?.clearFiles()
   }
 }
@@ -293,8 +316,8 @@ async function loadTaskDetail(taskId) {
     const res = await getFormTask(taskId)
     if (res.code === 200) {
       currentTask.value = res.data
-      fields.value = res.fields || []
-      references.value = res.references || []
+      fields.value = res.data.fields || []
+      references.value = res.data.references || []
       // 构建预览URL
       if (currentTask.value.originalFileUrl) {
         originalFileUrl.value = import.meta.env.VITE_APP_BASE_API + currentTask.value.originalFileUrl
@@ -330,10 +353,19 @@ function confirmAllHighConfidence() {
 async function handleGenerate() {
   if (!currentTask.value) return
   // 先保存字段
-  const changedFields = fields.value.filter(f => f.userValue !== undefined)
+  const changedFields = fields.value
+    .filter(f => f.userValue !== undefined && f.userValue !== null && f.userValue !== '')
+    .map(f => ({
+      fieldId: f.fieldId,
+      userValue: f.userValue,
+      isConfirmed: f.isConfirmed
+    }))
   if (changedFields.length > 0) {
     try {
-      await updateFormFields(changedFields)
+      await updateFormFields({
+        taskId: currentTask.value.taskId,
+        fields: changedFields
+      })
     } catch (e) {
       ElMessage.error('保存字段失败')
       return
@@ -360,19 +392,84 @@ async function handleDownload() {
   if (!currentTask.value) return
   try {
     const res = await downloadForm(currentTask.value.taskId)
-    const blob = new Blob([res])
+    const blob = new Blob([res], { type: res.type || 'application/octet-stream' })
     const link = document.createElement('a')
     link.href = URL.createObjectURL(blob)
     link.download = currentTask.value.filledFileName || '已填写表格.docx'
+    document.body.appendChild(link)
     link.click()
+    document.body.removeChild(link)
     URL.revokeObjectURL(link.href)
   } catch (e) {
     ElMessage.error('下载失败')
   }
 }
 
+function loadDemoData() {
+  // 模拟任务数据
+  const taskId = 'demo_task_' + Date.now()
+  currentTask.value = {
+    taskId: taskId,
+    taskName: '国家奖学金申请表（演示）',
+    originalFileName: '国家奖学金申请表.html',
+    originalFileUrl: '/国家奖学金申请表.html',
+    filledFileName: '国家奖学金申请表_已填写_20260419.html',
+    filledFileUrl: '/国家奖学金申请表_已填写.html',
+    status: '2',
+    statusName: '待确认',
+    fieldCount: 14,
+    confirmedCount: 0,
+    tokenCost: 850,
+    errorMsg: null,
+    createTime: '2026-04-19 10:30:00'
+  }
+
+  // 模拟字段识别结果（严格对照产品需求文档示例）
+  fields.value = [
+    { fieldId: 'field_001', fieldName: '姓名', fieldType: 'text', aiValue: '张三', userValue: '', isConfirmed: '0', confidence: 0.92, sourceDocName: '个人简历.docx', sortOrder: 1 },
+    { fieldId: 'field_002', fieldName: '性别', fieldType: 'text', aiValue: '男', userValue: '', isConfirmed: '0', confidence: 0.88, sourceDocName: '学生证.pdf', sortOrder: 2 },
+    { fieldId: 'field_003', fieldName: '出生年月', fieldType: 'date', aiValue: '2002-03-15', userValue: '', isConfirmed: '0', confidence: 0.90, sourceDocName: '身份证.pdf', sortOrder: 3 },
+    { fieldId: 'field_004', fieldName: '民族', fieldType: 'text', aiValue: '汉族', userValue: '', isConfirmed: '0', confidence: 0.85, sourceDocName: '身份证.pdf', sortOrder: 4 },
+    { fieldId: 'field_005', fieldName: '政治面貌', fieldType: 'text', aiValue: '共青团员', userValue: '', isConfirmed: '0', confidence: 0.72, sourceDocName: null, sortOrder: 5 },
+    { fieldId: 'field_006', fieldName: '学号', fieldType: 'text', aiValue: '2023001001', userValue: '', isConfirmed: '0', confidence: 0.95, sourceDocName: '学生证.pdf', sortOrder: 6 },
+    { fieldId: 'field_007', fieldName: '院系', fieldType: 'text', aiValue: '计算机科学与技术学院', userValue: '', isConfirmed: '0', confidence: 0.93, sourceDocName: '学生证.pdf', sortOrder: 7 },
+    { fieldId: 'field_008', fieldName: '专业', fieldType: 'text', aiValue: '软件工程', userValue: '', isConfirmed: '0', confidence: 0.91, sourceDocName: '个人简历.docx', sortOrder: 8 },
+    { fieldId: 'field_009', fieldName: '年级', fieldType: 'text', aiValue: '2023级', userValue: '', isConfirmed: '0', confidence: 0.89, sourceDocName: '学生证.pdf', sortOrder: 9 },
+    { fieldId: 'field_010', fieldName: '入学时间', fieldType: 'date', aiValue: '2023-09-01', userValue: '', isConfirmed: '0', confidence: 0.87, sourceDocName: '学生证.pdf', sortOrder: 10 },
+    { fieldId: 'field_011', fieldName: '必修课成绩', fieldType: 'number', aiValue: '92.5', userValue: '', isConfirmed: '0', confidence: 0.94, sourceDocName: '成绩单.pdf', sortOrder: 11 },
+    { fieldId: 'field_012', fieldName: '综合排名', fieldType: 'text', aiValue: '3/120', userValue: '', isConfirmed: '0', confidence: 0.91, sourceDocName: '成绩单.pdf', sortOrder: 12 },
+    { fieldId: 'field_013', fieldName: '英语水平', fieldType: 'text', aiValue: 'CET-6（568分）', userValue: '', isConfirmed: '0', confidence: 0.86, sourceDocName: '个人简历.docx', sortOrder: 13 },
+    { fieldId: 'field_014', fieldName: '申请日期', fieldType: 'date', aiValue: '2026-04-19', userValue: '', isConfirmed: '0', confidence: 0.65, sourceDocName: null, sortOrder: 14 }
+  ]
+
+  // 模拟参考文档（Vault）
+  references.value = [
+    { refId: 'ref_001', docName: '个人简历.docx', docType: 'docx', relevance: 0.95, isSelected: '1' },
+    { refId: 'ref_002', docName: '成绩单.pdf', docType: 'pdf', relevance: 0.92, isSelected: '1' },
+    { refId: 'ref_003', docName: '获奖证书.pdf', docType: 'pdf', relevance: 0.88, isSelected: '1' },
+    { refId: 'ref_004', docName: '学生证.pdf', docType: 'pdf', relevance: 0.85, isSelected: '1' },
+    { refId: 'ref_005', docName: '身份证.pdf', docType: 'pdf', relevance: 0.90, isSelected: '0' },
+    { refId: 'ref_006', docName: '劳动合同.pdf', docType: 'pdf', relevance: 0.78, isSelected: '0' }
+  ]
+
+  // 设置预览 URL（直接指向 public 目录下的演示文件）
+  const baseUrl = window.location.origin
+  originalFileUrl.value = baseUrl + '/国家奖学金申请表.html'
+  filledFileUrl.value = baseUrl + '/国家奖学金申请表_已填写.html'
+
+  isFieldPanelCollapsed.value = false
+  ElMessage.success('演示数据已加载，共识别 14 个字段，其中 2 个低置信度字段已标红提醒')
+}
+
 function handleSelectReferences() {
   ElMessage.info('参考文档选择功能开发中...')
+}
+
+function toggleFieldConfirm(row) {
+  row.isConfirmed = row.isConfirmed === '1' ? '0' : '1'
+  if (row.isConfirmed === '1' && !row.userValue && row.aiValue) {
+    row.userValue = row.aiValue
+  }
 }
 
 function toggleReference(ref) {
@@ -402,6 +499,13 @@ function confidenceTag(confidence) {
   if (confidence >= 0.9) return 'success'
   if (confidence >= 0.8) return 'warning'
   return 'danger'
+}
+
+function rowClassName({ row }) {
+  if (row.confidence !== undefined && row.confidence !== null && row.confidence < 0.8) {
+    return 'low-confidence-row'
+  }
+  return ''
 }
 
 function getFileIcon(type) {
@@ -459,7 +563,7 @@ function getFileIcon(type) {
 .preview-area {
   display: flex;
   gap: 16px;
-  height: 400px;
+  height: 80vh;
   flex-shrink: 0;
 }
 
@@ -538,10 +642,29 @@ function getFileIcon(type) {
   gap: 16px;
 }
 
-.ai-value-cell {
+.user-value-cell {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.user-value-cell .el-input {
+  flex: 1;
+}
+
+.collapse-icon {
+  transition: transform 0.2s;
+  margin-left: 8px;
+  color: var(--el-text-color-secondary);
+}
+
+/* 低置信度字段行标红提醒 */
+:deep(.low-confidence-row) {
+  background-color: var(--el-color-danger-light-9) !important;
+}
+
+:deep(.low-confidence-row:hover > td) {
+  background-color: var(--el-color-danger-light-8) !important;
 }
 
 /* 参考文档面板 */

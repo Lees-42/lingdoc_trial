@@ -37,7 +37,6 @@ const usePermissionStore = defineStore(
           // 向后端请求路由数据
           getRouters().then(res => {
             renameMenuTitle(res.data, '智能检索', '灵犀问答')
-            renameMenuTitle(res.data, '表格助手', '关系图谱')
             const normalizedData = res.data
             const sidebarRoutes = filterAsyncRouter(JSON.parse(JSON.stringify(normalizedData)))
             const rewriteRoutes = filterAsyncRouter(JSON.parse(JSON.stringify(normalizedData)), false, true)
