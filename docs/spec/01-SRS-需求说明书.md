@@ -64,7 +64,7 @@ graph TB
 Keytar密钥管理<br/>(Windows Credential<br/>Manager/macOS Keychain)
         ]
         A --> C[
-PostgreSQL生命周期管理<br/>(启动/停止/监控)
+MySQL生命周期管理<br/>(启动/停止/监控)
         ]
         A --> D[
 JRE生命周期管理<br/>(启动后端JAR)
@@ -100,7 +100,7 @@ Spring Security + JWT<br/>权限认证
 MyBatis Plus<br/>ORM框架
         ]
         L --> O[
-PostgreSQL 12+<br/>(便携式绿色版)
+MySQL 8.0+<br/>(主数据库)
         ]
         L --> P[
 PaddleOCR-json<br/>外部调用
@@ -139,15 +139,15 @@ Axios HTTP<br/>localhost:{动态端口}
 **客户端环境**:
 - **操作系统**: Windows 10+, macOS 10.15+, Linux (Ubuntu 20.04+)
 - **硬件**: CPU 4核+，内存 8GB+，存储 10GB+
-- **依赖**: Node.js 18+, JDK 17+, PostgreSQL 12+ (Portable)
+- **依赖**: Node.js 18+, JDK 17+, MySQL 8.0+
 
 **开发环境**:
 - **前端**: Node.js 18, Vue 3.5.26, Element Plus 2.13.1, Vite 6.4.1
-- **后端**: Spring Boot 4.0.3, MyBatis 4.0.1, PostgreSQL 12+
+- **后端**: Spring Boot 4.0.3, MyBatis 4.0.1, MySQL 8.0+
 - **工具**: Maven 3.8+, Git 2.30+, Docker (可选)
 
 **生产环境**:
-- **数据库**: PostgreSQL 12+ (绿色版捆绑，无外部依赖)
+- **数据库**: MySQL 8.0+
 - **运行时**: Electron 28+ (内置Node.js 18)
 - **部署**: 独立安装包，支持静默升级
 
@@ -407,7 +407,7 @@ graph TD
 │   │   └── form_draft_20260417_001.docx
 │   └── thumbnails/             # 缩略图（快速预览）
 │       └── 实验报告要求_20260417_thumb.jpg
-└── pgdata/                     # PostgreSQL 便携版数据目录
+└── mysqldata/                  # MySQL 数据目录
 ```
 
 ### 4.2 文件命名规范
@@ -424,32 +424,30 @@ graph TD
 
 ### 4.3 元数据存储
 
-**主索引表 (PostgreSQL)**: `file_index`
+**主索引表 (MySQL)**: `file_index`
 - 存储文件基本信息、路径、状态、checksum、AI 分类路径
 
-**版本表 (PostgreSQL)**: `file_version`
+**版本表 (MySQL)**: `file_version`
 - 存储版本号、快照路径、操作类型、操作时间、checksum
 
-**全文检索加速 (PostgreSQL GIN 索引)**:
+**全文检索加速 (MySQL FULLTEXT 索引)**:
 ```sql
--- 用于自然语言检索
+-- 用于自然语言检索（MySQL 兼容）
 CREATE TABLE file_search_index (
-    file_id TEXT PRIMARY KEY,
-    vault_relative_path TEXT,
-    original_name TEXT,
-    checksum TEXT,
-    tags TEXT,  -- JSON数组
-    ocr_text TEXT,
-    tsvector_text TSVECTOR,  -- GIN 全文检索用
-    created_at INTEGER
-);
-
-CREATE INDEX idx_fts_gin ON file_search_index USING GIN(tsvector_text);
+    file_id VARCHAR(64) PRIMARY KEY,
+    vault_relative_path VARCHAR(512),
+    original_name VARCHAR(256),
+    checksum VARCHAR(64),
+    tags JSON COMMENT 'JSON数组',
+    ocr_text LONGTEXT,
+    created_at BIGINT,
+    FULLTEXT INDEX ft_ocr_text (ocr_text) WITH PARSER ngram
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ```
 
 **设计理由**:
-- PostgreSQL: 同时承担数据完整性、事务一致性和全文检索三重职责
-- GIN 索引: 支持 10 万级文档的毫秒级中文全文检索
+- MySQL: 同时承担数据完整性、事务一致性和全文检索三重职责
+- FULLTEXT + ngram 解析器: 支持 10 万级文档的毫秒级中文全文检索
 - 所有元数据与原始文件同机存储，确保数据本地化
 
 ---
