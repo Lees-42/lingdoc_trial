@@ -11,23 +11,23 @@
 
 ### 1.1 Vault 在现有文档中的覆盖情况
 
-| 文档 | Vault 提及情况 | 问题 |
-|------|---------------|------|
-| `docs/spec/01-SRS-需求说明书.md` | 15次+，完整定义了物理存储结构、路径规范、命名规则 | ✅ 概念设计完善 |
-| `docs/fast/01-表格填写助手-产品需求.md` | 5次，参考文档从 Vault 检索 | ⚠️ 未说明 Vault 文件如何被数据库索引 |
-| `docs/fast/02-数据库设计.md` | 2次，`doc_id` 标注为"Vault文档ID" | ❌ 外键实际指向 `kb_document`（仅AI知识库文档） |
-| `docs/ai/02-AI现有代码与基础设施现状.md` | 0次 | ❌ AI模块文档未涉及 Vault |
+| 文档                            | Vault 提及情况                 | 问题                               |
+| ----------------------------- | -------------------------- | -------------------------------- |
+| `docs/spec/01-SRS-需求说明书.md`   | 15次+，完整定义了物理存储结构、路径规范、命名规则 | ✅ 概念设计完善                         |
+| `docs/fast/01-表格填写助手-产品需求.md` | 5次，参考文档从 Vault 检索          | ⚠️ 未说明 Vault 文件如何被数据库索引          |
+| `docs/fast/02-数据库设计.md`       | 2次，`doc_id` 标注为"Vault文档ID" | ❌ 外键实际指向 `kb_document`（仅AI知识库文档） |
+| `docs/ai/02-AI现有代码与基础设施现状.md` | 0次                         | ❌ AI模块文档未涉及 Vault                |
 
 **核心发现**：Vault 在文档中有完整的**物理层设计**，但**没有任何文档**说明 Vault 中的文件如何在数据库中被索引和检索。`kb_document` 表仅覆盖已上传到 AI 知识库的文档，不能代表 Vault 中的全部文件。
 
 ### 1.2 MySQL 数据库设计在现有文档中的覆盖情况
 
-| 文档 | MySQL/数据库设计内容 | 问题 |
-|------|---------------------|------|
-| `docs/spec/01-SRS-需求说明书.md` | 已改为 MySQL 8.0+，提及 `file_index` / `file_version` / `file_search_index` | ❌ 只有概念描述，**没有实际建表语句** |
-| `docs/fast/02-数据库设计.md` | 表格助手3张表（任务/字段/参考文档） | ⚠️ 参考文档外键指向 `kb_document`，漏掉 Vault 普通文件 |
-| `docs/spec/09-AI模块架构设计.md` | AI 模块6张表（知识库/文档/分块/向量/会话/消息） | ✅ 完整 |
-| `ruoyi-server/sql/` | 现有3个脚本：主库 / AI模块 / 表格助手模块 | ❌ 缺少 Vault 文件索引脚本 |
+| 文档                          | MySQL/数据库设计内容                                                         | 问题                                      |
+| --------------------------- | --------------------------------------------------------------------- | --------------------------------------- |
+| `docs/spec/01-SRS-需求说明书.md` | 已改为 MySQL 8.0+，提及 `file_index` / `file_version` / `file_search_index` | ❌ 只有概念描述，**没有实际建表语句**                   |
+| `docs/fast/02-数据库设计.md`     | 表格助手3张表（任务/字段/参考文档）                                                   | ⚠️ 参考文档外键指向 `kb_document`，漏掉 Vault 普通文件 |
+| `docs/spec/09-AI模块架构设计.md`  | AI 模块6张表（知识库/文档/分块/向量/会话/消息）                                          | ✅ 完整                                    |
+| `ruoyi-server/sql/`         | 现有3个脚本：主库 / AI模块 / 表格助手模块                                             | ❌ 缺少 Vault 文件索引脚本                       |
 
 ---
 
@@ -51,19 +51,19 @@
          ┌───────────────────────┴───────────────────────┐
          │                                               │
     Vault 物理目录（文件系统）                      Vault 物理目录（文件系统）
-    /documents/学习资料/...                        /versions/ /temp/
+    /documents/学习资料/...                        /versions/ /desensitized/
 ```
 
 ### 2.2 功能受阻分析
 
-| 需求功能 | 当前数据库支撑 | 缺失什么 | 导致的问题 |
-|---------|--------------|---------|-----------|
-| **表格填写助手检索参考文档** | `kb_document` 表（仅AI知识库文档） | Vault 全部文件的索引 | 只能检索已上传知识库的文档，Vault 中大量文件漏检 |
-| **关系图谱展示真实文件** | 无 | Vault 文件索引 + 标签字段 | 只能使用 mock 数据，无法接入真实文件 |
-| **自动规整功能归档文件** | 无 | `file_index` 表记录归档信息 | AI 规整后文件存入 Vault，但数据库无记录，后续无法检索 |
-| **版本溯源** | 无 | `file_version` 表 | 无法记录版本快照的元数据 |
-| **全文检索** | `kb_chunk` 表（仅知识库分块） | Vault 文件的文本内容索引 | 只能检索知识库内容，Vault 普通文件无法被搜索 |
-| **重复文件检测** | 无 | checksum 索引 | 无法快速判断文件是否已存在 |
+| 需求功能             | 当前数据库支撑                   | 缺失什么                 | 导致的问题                           |
+| ---------------- | ------------------------- | -------------------- | ------------------------------- |
+| **表格填写助手检索参考文档** | `kb_document` 表（仅AI知识库文档） | Vault 全部文件的索引        | 只能检索已上传知识库的文档，Vault 中大量文件漏检     |
+| **关系图谱展示真实文件**   | 无                         | Vault 文件索引 + 标签字段    | 只能使用 mock 数据，无法接入真实文件           |
+| **自动规整功能归档文件**   | 无                         | `file_index` 表记录归档信息 | AI 规整后文件存入 Vault，但数据库无记录，后续无法检索 |
+| **版本溯源**         | 无                         | `file_version` 表     | 无法记录版本快照的元数据                    |
+| **全文检索**         | `kb_chunk` 表（仅知识库分块）      | Vault 文件的 OCR 文本索引   | 只能检索知识库内容，Vault 普通文件无法被搜索       |
+| **重复文件检测**       | 无                         | checksum 索引          | 无法快速判断文件是否已存在                   |
 
 ---
 
@@ -82,13 +82,14 @@
 | `file_name` | varchar(256) | 文件名 | ✅ |
 | `vault_path` | varchar(512) | Vault 内相对路径 | ✅ |
 | `abs_path` | varchar(512) | 绝对路径 | ✅ |
-| `file_type` | varchar(32) | 文件类型（txt/md/csv/json/xml/yaml） | ✅ |
+| `file_type` | varchar(32) | 文件类型（pdf/docx/xlsx等） | ✅ |
 | `file_size` | bigint | 文件大小 | ✅ |
 | `checksum` | varchar(64) | MD5/SHA256（去重用） | ✅ |
 | `tag` | varchar(128) | 一级目录标签（学习资料/申请材料/工作文档） | ✅ |
 | `sub_path` | varchar(512) | 子分类路径 | ⚪ |
 | `source_type` | char(1) | 来源：0手动上传 1自动规整 2表格助手生成 | ✅ |
-| `file_content` | longtext | 文件文本内容（全文检索用） | ✅ |
+| `ocr_text` | longtext | OCR/解析后的文本内容 | ✅ |
+| `is_desensitized` | char(1) | 是否有脱敏副本 | ⚪ |
 | `create_time` | datetime | 创建时间 | ✅ |
 | `update_time` | datetime | 更新时间 | ✅ |
 
@@ -97,7 +98,7 @@
 - 普通索引：`user_id`, `file_type`, `tag`, `checksum`, `source_type`
 - 联合索引：`(user_id, tag)`, `(user_id, file_type, create_time)`
 - 唯一索引：`(user_id, checksum)` — 同用户下文件去重
-- 全文索引：`file_name` (FULLTEXT ngram), `file_content` (FULLTEXT ngram)
+- 全文索引：`file_name` (FULLTEXT ngram), `ocr_text` (FULLTEXT ngram)
 
 #### 表B：`lingdoc_file_version`（文件版本记录表）
 
@@ -161,14 +162,14 @@ ADD KEY `idx_file_index_id` (`file_index_id`);
 
 仅有表结构不够，还需要定义 Vault 目录与数据库索引的同步策略：
 
-| 同步时机 | 数据库操作 | 说明 |
-|---------|-----------|------|
-| **后端启动时** | 全量扫描 Vault 目录，比对 `file_index` | 检测新增/删除/修改的文件，同步更新索引 |
-| **文件上传时** | `INSERT INTO lingdoc_file_index` | 用户手动上传或表格助手生成文件时立即索引 |
-| **自动规整归档时** | `INSERT INTO lingdoc_file_index` | AI 规整后移动文件到 Vault 时立即索引 |
-| **文件删除时** | `DELETE FROM lingdoc_file_index` + 级联删除版本/标签 | 物理删除文件时同步清理元数据 |
-| **文件编辑时** | `UPDATE lingdoc_file_index` + `INSERT INTO file_version` | 保存新版本时更新索引并记录版本 |
-| **定时任务** | 增量扫描（每30分钟） | 兜底机制，处理可能漏同步的文件 |
+| 同步时机        | 数据库操作                                                    | 说明                      |
+| ----------- | -------------------------------------------------------- | ----------------------- |
+| **后端启动时**   | 全量扫描 Vault 目录，比对 `file_index`                            | 检测新2增/删除/修改的文件，同步更新索引   |
+| **文件上传时**   | `INSERT INTO lingdoc_file_index`                         | 用户手动上传或表格助手生成文件时立即索引    |
+| **自动规整归档时** | `INSERT INTO lingdoc_file_index`                         | AI 规整后移动文件到 Vault 时立即索引 |
+| **文件删除时**   | `DELETE FROM lingdoc_file_index` + 级联删除版本/标签             | 物理删除文件时同步清理元数据          |
+| **文件编辑时**   | `UPDATE lingdoc_file_index` + `INSERT INTO file_version` | 保存新版本时更新索引并记录版本         |
+| **定时任务**    | 增量扫描（每30分钟）                                              | 兜底机制，处理可能漏同步的文件         |
 
 ---
 
@@ -180,7 +181,7 @@ ADD KEY `idx_file_index_id` (`file_index_id`);
 |------|--------------------------|---------|
 | 当前：遍历文件系统 | ~200ms ~ 2s | `File.listFiles()` 递归遍历 |
 | 当前：仅查 `kb_document` | ~10ms | 但只能覆盖知识库文档 |
-| **优化后：查 `lingdoc_file_index`** | **~5ms** | `SELECT ... WHERE user_id=? AND MATCH(file_name,file_content) AGAINST(?)` |
+| **优化后：查 `lingdoc_file_index`** | **~5ms** | `SELECT ... WHERE user_id=? AND MATCH(file_name,ocr_text) AGAINST(?)` |
 
 ### 4.2 关系图谱标签提取
 
@@ -194,7 +195,7 @@ ADD KEY `idx_file_index_id` (`file_index_id`);
 | 方案 | 检索范围 | 响应时间 |
 |------|---------|---------|
 | 当前：`kb_chunk` 表 | 仅知识库文档的分块 | ~50ms |
-| **优化后：`file_index` 全文索引** | **Vault 中所有文件的文本内容** | **~50ms（同等性能，范围扩大）** |
+| **优化后：`file_index` OCR 全文索引** | **Vault 中所有文件的 OCR 文本** | **~50ms（同等性能，范围扩大）** |
 
 ---
 
