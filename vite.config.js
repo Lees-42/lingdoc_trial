@@ -43,8 +43,11 @@ export default defineConfig(({ mode, command }) => {
     // 配置 Vite 开发服务器
     server: {
       port: 80,
-      host: false, // 不允许外部访问
+      host: true, // 不允许外部访问
       open: true, // 自动打开浏览器
+      server: {
+    allowedHosts: ['prerespectable-abstractively-kim.ngrok-free.dev']
+  },
       proxy: {
         // https://cn.vitejs.dev/config/#server-proxy
         '/dev-api': {
