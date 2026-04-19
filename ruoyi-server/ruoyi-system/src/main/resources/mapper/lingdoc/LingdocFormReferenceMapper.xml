@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.system.mapper.lingdoc.LingdocFormReferenceMapper">
+    
+    <resultMap type="com.ruoyi.system.domain.lingdoc.LingdocFormReference" id="LingdocFormReferenceResult">
+        <result property="refId" column="ref_id"/>
+        <result property="taskId" column="task_id"/>
+        <result property="docId" column="doc_id"/>
+        <result property="docName" column="doc_name"/>
+        <result property="docPath" column="doc_path"/>
+        <result property="docType" column="doc_type"/>
+        <result property="relevance" column="relevance"/>
+        <result property="isSelected" column="is_selected"/>
+        <result property="createTime" column="create_time"/>
+    </resultMap>
+
+    <sql id="selectLingdocFormReferenceVo">
+        select ref_id, task_id, doc_id, doc_name, doc_path, doc_type, relevance, is_selected, create_time
+        from lingdoc_form_reference
+    </sql>
+
+    <select id="selectLingdocFormReferenceById" parameterType="String" resultMap="LingdocFormReferenceResult">
+        <include refid="selectLingdocFormReferenceVo"/>
+        where ref_id = #{refId}
+    </select>
+
+    <select id="selectLingdocFormReferenceList" parameterType="com.ruoyi.system.domain.lingdoc.LingdocFormReference" resultMap="LingdocFormReferenceResult">
+        <include refid="selectLingdocFormReferenceVo"/>
+        <where>
+            <if test="taskId != null  and taskId != ''"> and task_id = #{taskId}</if>
+            <if test="docId != null  and docId != ''"> and doc_id = #{docId}</if>
+            <if test="isSelected != null  and isSelected != ''"> and is_selected = #{isSelected}</if>
+        </where>
+        order by relevance desc
+    </select>
+
+    <select id="selectLingdocFormReferenceByTaskId" parameterType="String" resultMap="LingdocFormReferenceResult">
+        <include refid="selectLingdocFormReferenceVo"/>
+        where task_id = #{taskId}
+        order by relevance desc
+    </select>
+    
+    <insert id="insertLingdocFormReference" parameterType="com.ruoyi.system.domain.lingdoc.LingdocFormReference">
+        insert into lingdoc_form_reference
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="refId != null">ref_id,</if>
+            <if test="taskId != null">task_id,</if>
+            <if test="docId != null">doc_id,</if>
+            <if test="docName != null">doc_name,</if>
+            <if test="docPath != null">doc_path,</if>
+            <if test="docType != null">doc_type,</if>
+            <if test="relevance != null">relevance,</if>
+            <if test="isSelected != null">is_selected,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="refId != null">#{refId},</if>
+            <if test="taskId != null">#{taskId},</if>
+            <if test="docId != null">#{docId},</if>
+            <if test="docName != null">#{docName},</if>
+            <if test="docPath != null">#{docPath},</if>
+            <if test="docType != null">#{docType},</if>
+            <if test="relevance != null">#{relevance},</if>
+            <if test="isSelected != null">#{isSelected},</if>
+        </trim>
+    </insert>
+
+    <insert id="batchInsertLingdocFormReference">
+        insert into lingdoc_form_reference (ref_id, task_id, doc_id, doc_name, doc_path, doc_type, relevance, is_selected)
+        values
+        <foreach collection="list" item="item" separator=",">
+            (#{item.refId}, #{item.taskId}, #{item.docId}, #{item.docName}, #{item.docPath}, #{item.docType}, #{item.relevance}, #{item.isSelected})
+        </foreach>
+    </insert>
+
+    <update id="updateLingdocFormReference" parameterType="com.ruoyi.system.domain.lingdoc.LingdocFormReference">
+        update lingdoc_form_reference
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="taskId != null">task_id = #{taskId},</if>
+            <if test="docId != null">doc_id = #{docId},</if>
+            <if test="docName != null">doc_name = #{docName},</if>
+            <if test="docPath != null">doc_path = #{docPath},</if>
+            <if test="docType != null">doc_type = #{docType},</if>
+            <if test="relevance != null">relevance = #{relevance},</if>
+            <if test="isSelected != null">is_selected = #{isSelected},</if>
+        </trim>
+        where ref_id = #{refId}
+    </update>
+
+    <delete id="deleteLingdocFormReferenceById" parameterType="String">
+        delete from lingdoc_form_reference where ref_id = #{refId}
+    </delete>
+
+    <delete id="deleteLingdocFormReferenceByTaskId" parameterType="String">
+        delete from lingdoc_form_reference where task_id = #{taskId}
+    </delete>
+
+    <delete id="deleteLingdocFormReferenceByIds" parameterType="String">
+        delete from lingdoc_form_reference where ref_id in 
+        <foreach collection="array" item="refId" open="(" separator="," close=")">
+            #{refId}
+        </foreach>
+    </delete>
+</mapper>
