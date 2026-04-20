@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.system.mapper.lingdoc.LingdocFormFieldMapper">
+    
+    <resultMap type="com.ruoyi.system.domain.lingdoc.LingdocFormField" id="LingdocFormFieldResult">
+        <result property="fieldId" column="field_id"/>
+        <result property="taskId" column="task_id"/>
+        <result property="fieldName" column="field_name"/>
+        <result property="fieldType" column="field_type"/>
+        <result property="fieldLabel" column="field_label"/>
+        <result property="aiValue" column="ai_value"/>
+        <result property="userValue" column="user_value"/>
+        <result property="isConfirmed" column="is_confirmed"/>
+        <result property="confidence" column="confidence"/>
+        <result property="sourceDocId" column="source_doc_id"/>
+        <result property="sourceDocName" column="source_doc_name"/>
+        <result property="sortOrder" column="sort_order"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+    </resultMap>
+
+    <sql id="selectLingdocFormFieldVo">
+        select field_id, task_id, field_name, field_type, field_label, ai_value, user_value,
+               is_confirmed, confidence, source_doc_id, source_doc_name, sort_order, create_time, update_time
+        from lingdoc_form_field
+    </sql>
+
+    <select id="selectLingdocFormFieldById" parameterType="String" resultMap="LingdocFormFieldResult">
+        <include refid="selectLingdocFormFieldVo"/>
+        where field_id = #{fieldId}
+    </select>
+
+    <select id="selectLingdocFormFieldList" parameterType="com.ruoyi.system.domain.lingdoc.LingdocFormField" resultMap="LingdocFormFieldResult">
+        <include refid="selectLingdocFormFieldVo"/>
+        <where>
+            <if test="taskId != null  and taskId != ''"> and task_id = #{taskId}</if>
+            <if test="fieldName != null  and fieldName != ''"> and field_name like concat('%', #{fieldName}, '%')</if>
+            <if test="isConfirmed != null  and isConfirmed != ''"> and is_confirmed = #{isConfirmed}</if>
+        </where>
+        order by sort_order asc
+    </select>
+
+    <select id="selectLingdocFormFieldByTaskId" parameterType="String" resultMap="LingdocFormFieldResult">
+        <include refid="selectLingdocFormFieldVo"/>
+        where task_id = #{taskId}
+        order by sort_order asc
+    </select>
+    
+    <insert id="insertLingdocFormField" parameterType="com.ruoyi.system.domain.lingdoc.LingdocFormField">
+        insert into lingdoc_form_field
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="fieldId != null">field_id,</if>
+            <if test="taskId != null">task_id,</if>
+            <if test="fieldName != null">field_name,</if>
+            <if test="fieldType != null">field_type,</if>
+            <if test="fieldLabel != null">field_label,</if>
+            <if test="aiValue != null">ai_value,</if>
+            <if test="userValue != null">user_value,</if>
+            <if test="isConfirmed != null">is_confirmed,</if>
+            <if test="confidence != null">confidence,</if>
+            <if test="sourceDocId != null">source_doc_id,</if>
+            <if test="sourceDocName != null">source_doc_name,</if>
+            <if test="sortOrder != null">sort_order,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="fieldId != null">#{fieldId},</if>
+            <if test="taskId != null">#{taskId},</if>
+            <if test="fieldName != null">#{fieldName},</if>
+            <if test="fieldType != null">#{fieldType},</if>
+            <if test="fieldLabel != null">#{fieldLabel},</if>
+            <if test="aiValue != null">#{aiValue},</if>
+            <if test="userValue != null">#{userValue},</if>
+            <if test="isConfirmed != null">#{isConfirmed},</if>
+            <if test="confidence != null">#{confidence},</if>
+            <if test="sourceDocId != null">#{sourceDocId},</if>
+            <if test="sourceDocName != null">#{sourceDocName},</if>
+            <if test="sortOrder != null">#{sortOrder},</if>
+        </trim>
+    </insert>
+
+    <insert id="batchInsertLingdocFormField">
+        insert into lingdoc_form_field (field_id, task_id, field_name, field_type, field_label, ai_value, user_value, is_confirmed, confidence, source_doc_id, source_doc_name, sort_order)
+        values
+        <foreach collection="list" item="item" separator=",">
+            (#{item.fieldId}, #{item.taskId}, #{item.fieldName}, #{item.fieldType}, #{item.fieldLabel}, #{item.aiValue}, #{item.userValue}, #{item.isConfirmed}, #{item.confidence}, #{item.sourceDocId}, #{item.sourceDocName}, #{item.sortOrder})
+        </foreach>
+    </insert>
+
+    <update id="updateLingdocFormField" parameterType="com.ruoyi.system.domain.lingdoc.LingdocFormField">
+        update lingdoc_form_field
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="taskId != null">task_id = #{taskId},</if>
+            <if test="fieldName != null">field_name = #{fieldName},</if>
+            <if test="fieldType != null">field_type = #{fieldType},</if>
+            <if test="fieldLabel != null">field_label = #{fieldLabel},</if>
+            <if test="aiValue != null">ai_value = #{aiValue},</if>
+            <if test="userValue != null">user_value = #{userValue},</if>
+            <if test="isConfirmed != null">is_confirmed = #{isConfirmed},</if>
+            <if test="confidence != null">confidence = #{confidence},</if>
+            <if test="sourceDocId != null">source_doc_id = #{sourceDocId},</if>
+            <if test="sourceDocName != null">source_doc_name = #{sourceDocName},</if>
+            <if test="sortOrder != null">sort_order = #{sortOrder},</if>
+        </trim>
+        where field_id = #{fieldId}
+    </update>
+
+    <update id="batchUpdateLingdocFormField">
+        <foreach collection="list" item="item" separator=";">
+            update lingdoc_form_field
+            set user_value = #{item.userValue}, is_confirmed = #{item.isConfirmed}
+            where field_id = #{item.fieldId}
+        </foreach>
+    </update>
+
+    <delete id="deleteLingdocFormFieldById" parameterType="String">
+        delete from lingdoc_form_field where field_id = #{fieldId}
+    </delete>
+
+    <delete id="deleteLingdocFormFieldByTaskId" parameterType="String">
+        delete from lingdoc_form_field where task_id = #{taskId}
+    </delete>
+
+    <delete id="deleteLingdocFormFieldByIds" parameterType="String">
+        delete from lingdoc_form_field where field_id in 
+        <foreach collection="array" item="fieldId" open="(" separator="," close=")">
+            #{fieldId}
+        </foreach>
+    </delete>
+</mapper>

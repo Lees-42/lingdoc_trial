@@ -1,0 +1,59 @@
+# Runtime environments
+jdk17/
+maven/
+apache-maven-3.9.6-bin.zip
+
+# Database data
+mysql-config/
+mysql-data/
+dump.rdb
+
+# Node modules
+node_modules/
+**/node_modules/
+
+# Maven build output
+target/
+**/target/
+
+# Logs
+*.log
+
+# Screenshots / temp images
+current-page.png
+ruoyi-login.png
+sidebar-check.png
+final-sidebar-check.png
+organize-page.png
+organize-after-cancel.png
+organize-refreshed.png
+ai-embedded-test.png
+
+# System temp
+.kimi/
+.agents/
+.git-lingdoc-ai-backup/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# npm
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Build output
+dist/
+build/
+
+# Git backups
+.git-lingdoc-backup/
+.git-lingdoc-ai-backup/
+
+temp_mb/

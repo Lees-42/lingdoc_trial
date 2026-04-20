@@ -1,0 +1,158 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - link "灵档" [ref=e6] [cursor=pointer]:
+        - /url: /
+        - img [ref=e7]
+        - heading "灵档" [level=1] [ref=e8]
+      - menubar [ref=e12]:
+        - link "首页" [ref=e14] [cursor=pointer]:
+          - /url: /index
+          - menuitem "首页" [ref=e15]:
+            - img [ref=e16]
+            - generic [ref=e18]: 首页
+        - link "审计监控" [ref=e20] [cursor=pointer]:
+          - /url: /monitor
+          - menuitem "审计监控" [ref=e21]:
+            - img [ref=e22]
+            - generic [ref=e24]: 审计监控
+        - menuitem "系统设置" [ref=e26]:
+          - generic [ref=e27] [cursor=pointer]:
+            - img [ref=e28]
+            - generic [ref=e30]: 系统设置
+            - img [ref=e32]
+        - menuitem "灵档" [expanded] [ref=e35]:
+          - generic [ref=e36] [cursor=pointer]:
+            - img [ref=e37]
+            - generic [ref=e38]: 灵档
+            - img [ref=e40]
+          - menu [ref=e192]:
+            - link "自动规整" [ref=e194] [cursor=pointer]:
+              - /url: /lingdoc/organize
+              - menuitem "自动规整" [ref=e195]:
+                - img [ref=e196]
+                - generic [ref=e198]: 自动规整
+            - link "灵犀问答" [ref=e200] [cursor=pointer]:
+              - /url: /lingdoc/search
+              - menuitem "灵犀问答" [ref=e201]:
+                - img [ref=e202]
+                - generic [ref=e204]: 灵犀问答
+            - link "版本溯源" [ref=e206] [cursor=pointer]:
+              - /url: /lingdoc/version
+              - menuitem "版本溯源" [ref=e207]:
+                - img [ref=e208]
+                - generic [ref=e210]: 版本溯源
+            - link "关系图谱" [ref=e212] [cursor=pointer]:
+              - /url: /lingdoc/form
+              - menuitem "关系图谱" [ref=e213]:
+                - img [ref=e214]
+                - generic [ref=e216]: 关系图谱
+    - generic [ref=e42]:
+      - generic [ref=e44]:
+        - img [ref=e46] [cursor=pointer]
+        - navigation "面包屑" [ref=e48]:
+          - link "首页" [ref=e50]
+        - generic [ref=e51]:
+          - img [ref=e53] [cursor=pointer]
+          - img [ref=e56] [cursor=pointer]
+          - img [ref=e59] [cursor=pointer]
+          - button [ref=e63] [cursor=pointer]:
+            - img [ref=e64]
+          - button "LingDoc" [ref=e67] [cursor=pointer]:
+            - img [ref=e68]
+            - text: LingDoc
+      - generic [ref=e70]:
+        - generic [ref=e71]:
+          - generic [ref=e72]:
+            - generic [ref=e74]: 仪表盘 Demo
+            - heading "灵档" [level=1] [ref=e75]
+            - paragraph [ref=e76]: 让文档回到本地，让每一次整理、检索与回溯都更清晰、更可控。
+            - generic [ref=e77]:
+              - button "进入自动规整" [ref=e78] [cursor=pointer]:
+                - generic [ref=e79]: 进入自动规整
+              - button "打开灵犀问答" [ref=e80] [cursor=pointer]:
+                - generic [ref=e81]: 打开灵犀问答
+          - generic [ref=e82]:
+            - generic [ref=e83]: 工作区状态
+            - strong [ref=e84]: 系统正在运行
+            - generic [ref=e86]:
+              - generic [ref=e87]:
+                - generic [ref=e88]: 算力使用情况
+                - strong [ref=e89]: 68%
+              - progressbar [ref=e90]
+        - generic [ref=e94]:
+          - generic [ref=e95]:
+            - heading "仪表盘概览" [level=2] [ref=e96]
+            - generic [ref=e97]: 1.0.5 · DEMO MODE
+          - generic [ref=e98]:
+            - article [ref=e99]:
+              - text: 文档库存
+              - strong [ref=e100]: 1,286
+              - paragraph [ref=e101]: 较昨日 +18
+            - article [ref=e102]:
+              - text: 待规整条目
+              - strong [ref=e103]: "32"
+              - paragraph [ref=e104]: 预计 14 分钟完成
+            - article [ref=e105]:
+              - text: 检索命中率
+              - strong [ref=e106]: 98.4%
+              - paragraph [ref=e107]: 近 7 天稳定
+          - generic [ref=e108]:
+            - article [ref=e109]:
+              - heading "近 7 天处理趋势" [level=3] [ref=e111]
+            - article [ref=e115]:
+              - heading "当月使用强度热力图" [level=3] [ref=e117]
+        - generic [ref=e121]:
+          - heading "功能跳转" [level=2] [ref=e123]
+          - generic [ref=e124]:
+            - link "整理 自动规整 把零散素材整理成稳定结构，减少后续查找成本。 立即进入" [ref=e125] [cursor=pointer]:
+              - /url: /lingdoc/organize
+              - generic [ref=e126]:
+                - generic [ref=e127]: 整理
+                - img [ref=e128]
+              - heading "自动规整" [level=3] [ref=e134]
+              - paragraph [ref=e135]: 把零散素材整理成稳定结构，减少后续查找成本。
+              - generic [ref=e136]: 立即进入
+            - link "搜索 灵犀问答 按关键词、上下文和使用场景快速定位目标文档。 立即进入" [ref=e137] [cursor=pointer]:
+              - /url: /lingdoc/search
+              - generic [ref=e138]:
+                - generic [ref=e139]: 搜索
+                - img [ref=e140]
+              - heading "灵犀问答" [level=3] [ref=e146]
+              - paragraph [ref=e147]: 按关键词、上下文和使用场景快速定位目标文档。
+              - generic [ref=e148]: 立即进入
+            - link "追踪 版本溯源 查看文档变更脉络，保留整理前后的信息连续性。 立即进入" [ref=e149] [cursor=pointer]:
+              - /url: /lingdoc/version
+              - generic [ref=e150]:
+                - generic [ref=e151]: 追踪
+                - img [ref=e152]
+              - heading "版本溯源" [level=3] [ref=e158]
+              - paragraph [ref=e159]: 查看文档变更脉络，保留整理前后的信息连续性。
+              - generic [ref=e160]: 立即进入
+            - link "可视化 关系图谱 探索本地文件间的隐性关联网络，发现数据孤岛与核心枢纽。 立即进入" [ref=e161] [cursor=pointer]:
+              - /url: /lingdoc/form
+              - generic [ref=e162]:
+                - generic [ref=e163]: 可视化
+                - img [ref=e164]
+              - heading "关系图谱" [level=3] [ref=e170]
+              - paragraph [ref=e171]: 探索本地文件间的隐性关联网络，发现数据孤岛与核心枢纽。
+              - generic [ref=e172]: 立即进入
+        - generic [ref=e173]:
+          - heading "运行脉冲" [level=2] [ref=e175]
+          - generic [ref=e176]:
+            - generic [ref=e177]:
+              - heading "文档语义热点" [level=3] [ref=e178]
+              - paragraph [ref=e179]: 基于上传文档词频生成的词云
+            - generic [ref=e180]:
+              - generic [ref=e181]: DDL
+              - generic [ref=e182]: 期末复习
+              - generic [ref=e183]: 实验报告
+              - generic [ref=e184]: 课程论文
+              - generic [ref=e185]: 社团策划
+              - generic [ref=e186]: 文献综述
+              - generic [ref=e187]: 实习简历
+              - generic [ref=e188]: PPT大作业
+              - generic [ref=e189]: 考公/考研
+              - generic [ref=e190]: 证书/成绩单
+              - generic [ref=e191]: 奖学金申请
+  - img

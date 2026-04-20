@@ -1,0 +1,41 @@
+# LingDoc AI模块配置
+
+# AI模型配置
+lingdoc:
+  ai:
+    # Embedding模型配置
+    embedding:
+      provider: openai  # openai | local | ollama
+      model: text-embedding-3-small
+      api-key: ${OPENAI_API_KEY:}
+      base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
+      timeout: 30
+      
+    # LLM配置
+    llm:
+      provider: openai  # openai | local | ollama
+      model: gpt-4o-mini
+      api-key: ${OPENAI_API_KEY:}
+      base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
+      timeout: 60
+      max-tokens: 2048
+      temperature: 0.7
+      
+    # 向量检索配置
+    retrieval:
+      top-k: 5
+      min-score: 0.75
+      chunk-size: 512
+      chunk-overlap: 50
+      
+    # Token计费配置
+    billing:
+      embedding-rate: 0.1    # 每1000 tokens
+      input-rate: 0.5        # 每1000 tokens
+      output-rate: 1.5       # 每1000 tokens
+      
+    # 文件上传配置
+    upload:
+      max-file-size: 50MB
+      allowed-types: pdf,doc,docx,xls,xlsx,txt,png,jpg,jpeg
+      temp-dir: ${java.io.tmpdir}/lingdoc/upload

@@ -1,0 +1,151 @@
+- generic [ref=e1]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - link "灵档" [ref=e6] [cursor=pointer]:
+        - /url: /
+        - img [ref=e7]
+        - heading "灵档" [level=1] [ref=e8]
+      - menubar [ref=e12]:
+        - link "首页" [ref=e14] [cursor=pointer]:
+          - /url: /index
+          - menuitem "首页" [ref=e15]:
+            - img [ref=e16]
+            - generic [ref=e18]: 首页
+        - link "审计监控" [ref=e20] [cursor=pointer]:
+          - /url: /monitor
+          - menuitem "审计监控" [ref=e21]:
+            - img [ref=e22]
+            - generic [ref=e24]: 审计监控
+        - menuitem "系统设置" [ref=e26]:
+          - generic [ref=e27] [cursor=pointer]:
+            - img [ref=e28]
+            - generic [ref=e30]: 系统设置
+            - img [ref=e32]
+        - menuitem "灵档" [expanded] [ref=e35]:
+          - generic [ref=e36] [cursor=pointer]:
+            - img [ref=e37]
+            - generic [ref=e38]: 灵档
+            - img [ref=e40]
+          - menu [ref=e42]:
+            - link "自动规整" [ref=e44] [cursor=pointer]:
+              - /url: /lingdoc/organize
+              - menuitem "自动规整" [ref=e45]:
+                - img [ref=e46]
+                - generic [ref=e48]: 自动规整
+            - link "灵犀问答" [ref=e50] [cursor=pointer]:
+              - /url: /lingdoc/search
+              - menuitem "灵犀问答" [ref=e51]:
+                - img [ref=e52]
+                - generic [ref=e54]: 灵犀问答
+            - link "版本溯源" [ref=e56] [cursor=pointer]:
+              - /url: /lingdoc/version
+              - menuitem "版本溯源" [ref=e57]:
+                - img [ref=e58]
+                - generic [ref=e60]: 版本溯源
+            - link "关系图谱" [ref=e62] [cursor=pointer]:
+              - /url: /lingdoc/form
+              - menuitem "关系图谱" [ref=e63]:
+                - img [ref=e64]
+                - generic [ref=e66]: 关系图谱
+    - generic [ref=e67]:
+      - generic [ref=e69]:
+        - img [ref=e71] [cursor=pointer]
+        - navigation "面包屑" [ref=e73]:
+          - generic [ref=e74]:
+            - link "首页" [ref=e75]
+            - text: /
+          - generic [ref=e76]:
+            - link "灵档" [ref=e77]
+            - text: /
+          - link "自动规整" [ref=e79]
+        - generic [ref=e80]:
+          - img [ref=e82] [cursor=pointer]
+          - img [ref=e85] [cursor=pointer]
+          - img [ref=e88] [cursor=pointer]
+          - button [ref=e92] [cursor=pointer]:
+            - img [ref=e93]
+          - button "LingDoc" [ref=e96] [cursor=pointer]:
+            - img [ref=e97]
+            - text: LingDoc
+      - generic [ref=e99]:
+        - heading "自动规整" [level=2] [ref=e100]
+        - paragraph [ref=e101]: 拖拽文件到下方区域，AI 将自动解析内容并推荐规范命名与分类路径。
+        - button "拖拽文件到此处，或 点击上传 支持 PDF、Word、Excel、图片、文本等格式，单次最多上传 20 个文件" [active] [ref=e105] [cursor=pointer]:
+          - generic [ref=e106]:
+            - img [ref=e108]
+            - generic [ref=e110]:
+              - generic [ref=e111]:
+                - text: 拖拽文件到此处，或
+                - emphasis [ref=e112]: 点击上传
+              - paragraph [ref=e113]: 支持 PDF、Word、Excel、图片、文本等格式，单次最多上传 20 个文件
+        - generic [ref=e148]:
+          - generic [ref=e150]:
+            - generic [ref=e151]: 待规整文件（1）
+            - generic [ref=e152]:
+              - button "批量归档" [disabled] [ref=e153]:
+                - img [ref=e155]
+                - generic [ref=e157]: 批量归档
+              - button "批量删除" [disabled] [ref=e158]:
+                - img [ref=e160]
+                - generic [ref=e162]: 批量删除
+              - button "清空列表" [ref=e163] [cursor=pointer]:
+                - img [ref=e165]
+                - generic [ref=e167]: 清空列表
+          - generic [ref=e170]:
+            - table [ref=e172]:
+              - rowgroup [ref=e182]:
+                - row "选择所有行 文件名 类型 大小 状态 AI 推荐文件名 AI 推荐路径 操作" [ref=e183]:
+                  - columnheader "选择所有行" [ref=e184]:
+                    - generic "选择所有行" [ref=e186] [cursor=pointer]:
+                      - generic [ref=e187]:
+                        - checkbox "选择所有行"
+                  - columnheader "文件名" [ref=e189]:
+                    - generic [ref=e190]: 文件名
+                  - columnheader "类型" [ref=e191]:
+                    - generic [ref=e192]: 类型
+                  - columnheader "大小" [ref=e193]:
+                    - generic [ref=e194]: 大小
+                  - columnheader "状态" [ref=e195]:
+                    - generic [ref=e196]: 状态
+                  - columnheader "AI 推荐文件名" [ref=e197]:
+                    - generic [ref=e198]: AI 推荐文件名
+                  - columnheader "AI 推荐路径" [ref=e199]:
+                    - generic [ref=e200]: AI 推荐路径
+                  - columnheader "操作" [ref=e201]:
+                    - generic [ref=e202]: 操作
+            - table [ref=e207]:
+              - rowgroup [ref=e217]:
+                - row "选择当前行 test_doc.txt TXT 100 B 解析中 -- -- AI分析 删除" [ref=e218]:
+                  - cell "选择当前行" [ref=e219]:
+                    - generic "选择当前行" [ref=e221] [cursor=pointer]:
+                      - generic [ref=e222]:
+                        - checkbox "选择当前行"
+                  - cell "test_doc.txt" [ref=e224]:
+                    - generic [ref=e226]:
+                      - img [ref=e227]
+                      - generic [ref=e228]: test_doc.txt
+                  - cell "TXT" [ref=e229]:
+                    - generic [ref=e232]: TXT
+                  - cell "100 B" [ref=e233]:
+                    - generic [ref=e234]: 100 B
+                  - cell "解析中" [ref=e235]:
+                    - generic [ref=e238]: 解析中
+                  - cell "--" [ref=e239]:
+                    - generic [ref=e240]: "--"
+                  - cell "--" [ref=e241]:
+                    - generic [ref=e242]: "--"
+                  - cell "AI分析 删除" [ref=e243]:
+                    - generic [ref=e244]:
+                      - button "AI分析" [ref=e245] [cursor=pointer]:
+                        - img [ref=e247]
+                        - generic [ref=e249]: AI分析
+                      - button "删除" [ref=e250] [cursor=pointer]:
+                        - img [ref=e252]
+                        - generic [ref=e254]: 删除
+  - img
+  - alert [ref=e255]:
+    - img [ref=e257]
+    - paragraph [ref=e259]: 已添加文件：test_doc.txt
+  - alert [ref=e260]:
+    - img [ref=e262]
+    - paragraph [ref=e264]: No static resource lingdoc/organize/upload for request '/lingdoc/organize/upload'.

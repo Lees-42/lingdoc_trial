@@ -1,0 +1,86 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - link "灵档" [ref=e6] [cursor=pointer]:
+        - /url: /
+        - img [ref=e7]
+        - heading "灵档" [level=1] [ref=e8]
+      - menubar [ref=e12]:
+        - link "首页" [ref=e14] [cursor=pointer]:
+          - /url: /index
+          - menuitem "首页" [ref=e15]:
+            - img [ref=e16]
+            - generic [ref=e18]: 首页
+        - link "审计监控" [ref=e20] [cursor=pointer]:
+          - /url: /monitor
+          - menuitem "审计监控" [ref=e21]:
+            - img [ref=e22]
+            - generic [ref=e24]: 审计监控
+        - menuitem "系统设置" [ref=e26]:
+          - generic [ref=e27] [cursor=pointer]:
+            - img [ref=e28]
+            - generic [ref=e30]: 系统设置
+            - img [ref=e32]
+        - menuitem "灵档" [expanded] [ref=e35]:
+          - generic [ref=e36] [cursor=pointer]:
+            - img [ref=e37]
+            - generic [ref=e38]: 灵档
+            - img [ref=e40]
+          - menu [ref=e42]:
+            - link "自动规整" [ref=e44] [cursor=pointer]:
+              - /url: /lingdoc/organize
+              - menuitem "自动规整" [ref=e45]:
+                - img [ref=e46]
+                - generic [ref=e48]: 自动规整
+            - link "灵犀问答" [ref=e50] [cursor=pointer]:
+              - /url: /lingdoc/search
+              - menuitem "灵犀问答" [ref=e51]:
+                - img [ref=e52]
+                - generic [ref=e54]: 灵犀问答
+            - link "版本溯源" [ref=e56] [cursor=pointer]:
+              - /url: /lingdoc/version
+              - menuitem "版本溯源" [ref=e57]:
+                - img [ref=e58]
+                - generic [ref=e60]: 版本溯源
+            - link "关系图谱" [ref=e62] [cursor=pointer]:
+              - /url: /lingdoc/form
+              - menuitem "关系图谱" [ref=e63]:
+                - img [ref=e64]
+                - generic [ref=e66]: 关系图谱
+    - generic [ref=e67]:
+      - generic [ref=e69]:
+        - img [ref=e71] [cursor=pointer]
+        - navigation "面包屑" [ref=e73]:
+          - generic [ref=e74]:
+            - link "首页" [ref=e75]
+            - text: /
+          - generic [ref=e76]:
+            - link "灵档" [ref=e77]
+            - text: /
+          - link "自动规整" [ref=e79]
+        - generic [ref=e80]:
+          - img [ref=e82] [cursor=pointer]
+          - img [ref=e85] [cursor=pointer]
+          - img [ref=e88] [cursor=pointer]
+          - button [ref=e92] [cursor=pointer]:
+            - img [ref=e93]
+          - button "LingDoc" [ref=e96] [cursor=pointer]:
+            - img [ref=e97]
+            - text: LingDoc
+      - generic [ref=e99]:
+        - heading "自动规整" [level=2] [ref=e100]
+        - paragraph [ref=e101]: 拖拽文件到下方区域，AI 将自动解析内容并推荐规范命名与分类路径。
+        - button "拖拽文件到此处，或 点击上传 支持 PDF、Word、Excel、图片、文本等格式，单次最多上传 20 个文件" [ref=e105] [cursor=pointer]:
+          - generic [ref=e106]:
+            - img [ref=e108]
+            - generic [ref=e110]:
+              - generic [ref=e111]:
+                - text: 拖拽文件到此处，或
+                - emphasis [ref=e112]: 点击上传
+              - paragraph [ref=e113]: 支持 PDF、Word、Excel、图片、文本等格式，单次最多上传 20 个文件
+        - generic [ref=e114]:
+          - img [ref=e116]
+          - generic [ref=e132]:
+            - paragraph [ref=e133]: 暂无待规整文件
+            - paragraph [ref=e134]: 上传文件后，AI 将自动解析并推荐归档方案
+  - img

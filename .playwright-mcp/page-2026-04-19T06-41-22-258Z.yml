@@ -1,0 +1,25 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - img "LingDoc Logo" [ref=e6]
+      - heading "灵档" [level=3] [ref=e7]
+      - generic [ref=e11]:
+        - img [ref=e13]
+        - textbox "账号" [ref=e15]: admin
+      - generic [ref=e19]:
+        - img [ref=e21]
+        - textbox "密码" [ref=e23]: admin123
+      - generic [ref=e25]:
+        - generic [ref=e27]:
+          - img [ref=e29]
+          - textbox "验证码" [ref=e31]
+        - generic [ref=e32]:
+          - img
+      - generic [ref=e33] [cursor=pointer]:
+        - generic [ref=e34]:
+          - checkbox "记住密码"
+        - generic [ref=e36]: 记住密码
+      - button "登 录" [ref=e39] [cursor=pointer]:
+        - generic [ref=e41]: 登 录
+    - generic [ref=e42]: Copyright © 2018-2026 LingDoc. All Rights Reserved.
+  - img

@@ -1,0 +1,46 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e4]:
+    - generic [ref=e5]: AI 文档智能分析
+    - generic [ref=e7]:
+      - group "上传文件" [ref=e8]:
+        - generic [ref=e9]: 上传文件
+        - generic [ref=e11]:
+          - button "选择文件" [ref=e12] [cursor=pointer]:
+            - button "选择文件" [ref=e13]:
+              - generic [ref=e14]:
+                - img [ref=e16]
+                - text: 选择文件
+          - generic [ref=e18]: 支持 Word、PDF、TXT、图片格式，或直接在下方输入本地文件路径
+          - list
+      - generic [ref=e19]:
+        - generic [ref=e20]: "* 文件路径/URL"
+        - textbox "* 文件路径/URL" [ref=e24]:
+          - /placeholder: 本地路径如 C:\Users\xxx\file.docx，或云端URL
+      - generic [ref=e25]:
+        - generic [ref=e26]: "* 文件名称"
+        - textbox "* 文件名称" [ref=e30]:
+          - /placeholder: file.docx
+      - generic [ref=e31]:
+        - generic [ref=e32]: 文件类型
+        - generic [ref=e35] [cursor=pointer]:
+          - generic:
+            - combobox "文件类型" [ref=e37]
+            - generic [ref=e38]: Word (.docx)
+          - img [ref=e41]
+      - generic [ref=e43]:
+        - generic [ref=e44]: 分析类型
+        - radiogroup "分析类型" [ref=e46]:
+          - generic [ref=e47] [cursor=pointer]:
+            - radio "文档分析" [checked] [ref=e49]
+            - generic [ref=e51]: 文档分析
+          - generic [ref=e52] [cursor=pointer]:
+            - radio "图像分析" [ref=e54]
+            - generic [ref=e56]: 图像分析
+      - generic [ref=e58]:
+        - button "开始分析" [ref=e59] [cursor=pointer]:
+          - generic [ref=e60]:
+            - img [ref=e62]
+            - text: 开始分析
+        - button "重置" [ref=e64] [cursor=pointer]:
+          - generic [ref=e65]: 重置
+  - img
