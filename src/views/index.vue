@@ -174,7 +174,7 @@ const quickActions = [
     title: '关系图谱',
     tag: '可视化',
     icon: 'form',
-    path: '/lingdoc/form',
+    path: '/lingdoc/graph',
     description: '探索本地文件间的隐性关联网络，发现数据孤岛与核心枢纽。'
   }
 ]

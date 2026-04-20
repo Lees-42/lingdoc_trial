@@ -43,25 +43,30 @@ export default defineConfig(({ mode, command }) => {
     // 配置 Vite 开发服务器
     server: {
       port: 80,
-      host: true, // 不允许外部访问
+      host: true, // 允许外部访问
       open: true, // 自动打开浏览器
       server: {
     allowedHosts: ['prerespectable-abstractively-kim.ngrok-free.dev']
   },
-      proxy: {
-        // https://cn.vitejs.dev/config/#server-proxy
-        '/dev-api': {
-          target: baseUrl,
-          changeOrigin: true,
-          rewrite: (p) => p.replace(/^\/dev-api/, '')
-        },
-         // springdoc proxy
-         '^/v3/api-docs/(.*)': {
-          target: baseUrl,
-          changeOrigin: true,
-        }
+  /*
+  监听规则：捕获所有以 /dev-api 开头的请求
+  转发目标：转给 http://localhost:8080
+  路径改写：去掉 /dev-api 再转发 
+  */
+    proxy: {
+      // https://cn.vitejs.dev/config/#server-proxy
+      '/dev-api': {
+        target: baseUrl,
+        changeOrigin: true,
+        rewrite: (p) => p.replace(/^\/dev-api/, '')
+      },
+        // springdoc proxy
+        '^/v3/api-docs/(.*)': {
+        target: baseUrl,
+        changeOrigin: true,
       }
-    },
+    }
+},
     css: {
       postcss: {
         plugins: [
