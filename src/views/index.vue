@@ -6,7 +6,7 @@
         <h1 class="brand-title">灵档</h1>
         <p class="brand-slogan">让文档回到本地，让每一次整理、检索与回溯都更清晰、更可控。</p>
         <div class="hero-actions">
-          <el-button class="main-btn" type="primary" round @click="navigate('/lingdoc/upload')">进入文档上传</el-button>
+          <el-button class="main-btn" type="primary" round @click="navigate('/lingdoc/vault')">进入文件浏览器</el-button>
           <el-button class="main-btn main-btn--ghost" round @click="navigate('/lingdoc/agent')">打开灵犀问答</el-button>
         </div>
       </div>
@@ -150,11 +150,11 @@ const overviewCards = [
 
 const quickActions = [
   {
-    title: '文档上传',
-    tag: '整理',
-    icon: 'upload',
-    path: '/lingdoc/upload',
-    description: '把零散素材整理成稳定结构，减少后续查找成本。'
+    title: '文件浏览器',
+    tag: '浏览',
+    icon: 'folder',
+    path: '/lingdoc/vault',
+    description: '浏览、预览和管理 Vault 中的所有文件，支持上传与检索。'
   },
   {
     title: '灵犀问答',

@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.system.mapper.lingdoc.LingdocTagBindingMapper">
+
+    <resultMap type="com.ruoyi.system.domain.lingdoc.LingdocTagBinding" id="LingdocTagBindingResult">
+        <result property="bindingId" column="binding_id"/>
+        <result property="targetType" column="target_type"/>
+        <result property="targetId" column="target_id"/>
+        <result property="tagId" column="tag_id"/>
+        <result property="bindType" column="bind_type"/>
+        <result property="createTime" column="create_time"/>
+    </resultMap>
+
+    <sql id="selectLingdocTagBindingVo">
+        select binding_id, target_type, target_id, tag_id, bind_type, create_time
+        from lingdoc_tag_binding
+    </sql>
+
+    <select id="selectLingdocTagBindingById" parameterType="String" resultMap="LingdocTagBindingResult">
+        <include refid="selectLingdocTagBindingVo"/>
+        where binding_id = #{bindingId}
+    </select>
+
+    <select id="selectLingdocTagBindingList" parameterType="com.ruoyi.system.domain.lingdoc.LingdocTagBinding" resultMap="LingdocTagBindingResult">
+        <include refid="selectLingdocTagBindingVo"/>
+        <where>
+            <if test="targetType != null and targetType != ''"> and target_type = #{targetType}</if>
+            <if test="targetId != null and targetId != ''"> and target_id = #{targetId}</if>
+            <if test="tagId != null and tagId != ''"> and tag_id = #{tagId}</if>
+            <if test="bindType != null and bindType != ''"> and bind_type = #{bindType}</if>
+        </where>
+        order by create_time desc
+    </select>
+
+    <select id="selectLingdocTagBindingByTarget" resultMap="LingdocTagBindingResult">
+        <include refid="selectLingdocTagBindingVo"/>
+        where target_type = #{targetType} and target_id = #{targetId}
+        order by bind_type asc, create_time desc
+    </select>
+
+    <insert id="insertLingdocTagBinding" parameterType="com.ruoyi.system.domain.lingdoc.LingdocTagBinding">
+        insert into lingdoc_tag_binding
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="bindingId != null">binding_id,</if>
+            <if test="targetType != null">target_type,</if>
+            <if test="targetId != null">target_id,</if>
+            <if test="tagId != null">tag_id,</if>
+            <if test="bindType != null">bind_type,</if>
+            <if test="createTime != null">create_time,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="bindingId != null">#{bindingId},</if>
+            <if test="targetType != null">#{targetType},</if>
+            <if test="targetId != null">#{targetId},</if>
+            <if test="tagId != null">#{tagId},</if>
+            <if test="bindType != null">#{bindType},</if>
+            <if test="createTime != null">#{createTime},</if>
+        </trim>
+    </insert>
+
+    <update id="updateLingdocTagBinding" parameterType="com.ruoyi.system.domain.lingdoc.LingdocTagBinding">
+        update lingdoc_tag_binding
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="targetType != null">target_type = #{targetType},</if>
+            <if test="targetId != null">target_id = #{targetId},</if>
+            <if test="tagId != null">tag_id = #{tagId},</if>
+            <if test="bindType != null">bind_type = #{bindType},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+        </trim>
+        where binding_id = #{bindingId}
+    </update>
+
+    <delete id="deleteLingdocTagBindingById" parameterType="String">
+        delete from lingdoc_tag_binding where binding_id = #{bindingId}
+    </delete>
+
+    <delete id="deleteLingdocTagBindingByTarget">
+        delete from lingdoc_tag_binding where target_type = #{targetType} and target_id = #{targetId}
+    </delete>
+
+    <delete id="deleteLingdocTagBindingByIds" parameterType="String">
+        delete from lingdoc_tag_binding where binding_id in
+        <foreach collection="array" item="bindingId" open="(" separator="," close=")">
+            #{bindingId}
+        </foreach>
+    </delete>
+
+</mapper>

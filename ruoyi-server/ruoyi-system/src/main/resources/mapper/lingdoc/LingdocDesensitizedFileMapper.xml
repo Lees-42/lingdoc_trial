@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.system.mapper.lingdoc.LingdocDesensitizedFileMapper">
+
+    <resultMap type="com.ruoyi.system.domain.lingdoc.LingdocDesensitizedFile" id="LingdocDesensitizedFileResult">
+        <result property="desId" column="des_id"/>
+        <result property="fileId" column="file_id"/>
+        <result property="desPath" column="des_path"/>
+        <result property="desContent" column="des_content"/>
+        <result property="desChecksum" column="des_checksum"/>
+        <result property="ruleId" column="rule_id"/>
+        <result property="createTime" column="create_time"/>
+    </resultMap>
+
+    <sql id="selectLingdocDesensitizedFileVo">
+        select des_id, file_id, des_path, des_content, des_checksum, rule_id, create_time
+        from lingdoc_desensitized_file
+    </sql>
+
+    <select id="selectLingdocDesensitizedFileById" parameterType="String" resultMap="LingdocDesensitizedFileResult">
+        <include refid="selectLingdocDesensitizedFileVo"/>
+        where des_id = #{desId}
+    </select>
+
+    <select id="selectLingdocDesensitizedFileByFileId" parameterType="String" resultMap="LingdocDesensitizedFileResult">
+        <include refid="selectLingdocDesensitizedFileVo"/>
+        where file_id = #{fileId}
+    </select>
+
+    <select id="selectLingdocDesensitizedFileList" parameterType="com.ruoyi.system.domain.lingdoc.LingdocDesensitizedFile" resultMap="LingdocDesensitizedFileResult">
+        <include refid="selectLingdocDesensitizedFileVo"/>
+        <where>
+            <if test="fileId != null and fileId != ''"> and file_id = #{fileId}</if>
+            <if test="desChecksum != null and desChecksum != ''"> and des_checksum = #{desChecksum}</if>
+            <if test="ruleId != null and ruleId != ''"> and rule_id = #{ruleId}</if>
+        </where>
+        order by create_time desc
+    </select>
+
+    <insert id="insertLingdocDesensitizedFile" parameterType="com.ruoyi.system.domain.lingdoc.LingdocDesensitizedFile">
+        insert into lingdoc_desensitized_file
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="desId != null">des_id,</if>
+            <if test="fileId != null">file_id,</if>
+            <if test="desPath != null">des_path,</if>
+            <if test="desContent != null">des_content,</if>
+            <if test="desChecksum != null">des_checksum,</if>
+            <if test="ruleId != null">rule_id,</if>
+            <if test="createTime != null">create_time,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="desId != null">#{desId},</if>
+            <if test="fileId != null">#{fileId},</if>
+            <if test="desPath != null">#{desPath},</if>
+            <if test="desContent != null">#{desContent},</if>
+            <if test="desChecksum != null">#{desChecksum},</if>
+            <if test="ruleId != null">#{ruleId},</if>
+            <if test="createTime != null">#{createTime},</if>
+        </trim>
+    </insert>
+
+    <update id="updateLingdocDesensitizedFile" parameterType="com.ruoyi.system.domain.lingdoc.LingdocDesensitizedFile">
+        update lingdoc_desensitized_file
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="fileId != null">file_id = #{fileId},</if>
+            <if test="desPath != null">des_path = #{desPath},</if>
+            <if test="desContent != null">des_content = #{desContent},</if>
+            <if test="desChecksum != null">des_checksum = #{desChecksum},</if>
+            <if test="ruleId != null">rule_id = #{ruleId},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+        </trim>
+        where des_id = #{desId}
+    </update>
+
+    <delete id="deleteLingdocDesensitizedFileById" parameterType="String">
+        delete from lingdoc_desensitized_file where des_id = #{desId}
+    </delete>
+
+    <delete id="deleteLingdocDesensitizedFileByFileId" parameterType="String">
+        delete from lingdoc_desensitized_file where file_id = #{fileId}
+    </delete>
+
+    <delete id="deleteLingdocDesensitizedFileByIds" parameterType="String">
+        delete from lingdoc_desensitized_file where des_id in
+        <foreach collection="array" item="desId" open="(" separator="," close=")">
+            #{desId}
+        </foreach>
+    </delete>
+
+</mapper>

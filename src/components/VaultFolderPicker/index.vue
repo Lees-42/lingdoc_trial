@@ -64,6 +64,10 @@ const props = defineProps({
   folderTagMap: {
     type: Object,
     default: () => ({})
+  },
+  treeData: {
+    type: Array,
+    default: () => null
   }
 })
 
@@ -74,7 +78,6 @@ const treeRef = ref(null)
 const selectedPath = ref(props.defaultPath || '')
 const expandedKeys = ref([])
 
-// 监听 visible prop
 watch(() => props.visible, (val) => {
   dialogVisible.value = val
   if (val) {
@@ -87,7 +90,6 @@ watch(() => props.visible, (val) => {
   }
 })
 
-// 监听 dialog 关闭
 watch(dialogVisible, (val) => {
   if (!val) {
     emit('update:visible', false)
@@ -95,7 +97,7 @@ watch(dialogVisible, (val) => {
 })
 
 // Mock 目录树数据
-const vaultTree = ref([
+const mockTreeData = [
   {
     name: '学习资料',
     path: '/学习资料',
@@ -151,9 +153,15 @@ const vaultTree = ref([
       { name: '证书', path: '/图片素材/证书', children: [] }
     ]
   }
-])
+]
 
-// 为树节点注入标签数据
+// 目录树数据：优先使用外部传入的真实数据
+const vaultTree = ref([...mockTreeData])
+
+watch(() => props.treeData, (val) => {
+  vaultTree.value = val === null || val === undefined ? [...mockTreeData] : val
+}, { immediate: true })
+
 function injectTags(nodes) {
   return nodes.map(node => ({
     ...node,
@@ -164,12 +172,10 @@ function injectTags(nodes) {
 
 const treeData = ref(injectTags(vaultTree.value))
 
-// 监听 folderTagMap 变化，重新注入标签
-watch(() => props.folderTagMap, () => {
+watch([() => props.folderTagMap, vaultTree], () => {
   treeData.value = injectTags(vaultTree.value)
 }, { deep: true })
 
-// 初始化展开包含 defaultPath 的父节点
 function initExpandedKeys() {
   if (!props.defaultPath) {
     expandedKeys.value = []
@@ -191,12 +197,10 @@ watch(() => props.visible, (val) => {
   }
 })
 
-/** 节点点击 */
 function handleNodeClick(data) {
   selectedPath.value = data.path
 }
 
-/** 确认 */
 function handleConfirm() {
   if (!selectedPath.value) {
     ElMessage.warning('请选择保存目录')
@@ -206,7 +210,6 @@ function handleConfirm() {
   dialogVisible.value = false
 }
 
-/** 取消 */
 function handleCancel() {
   dialogVisible.value = false
 }

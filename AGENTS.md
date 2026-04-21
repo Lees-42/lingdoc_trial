@@ -38,7 +38,8 @@
 
 | 层级 | 技术 | 版本 | 说明 |
 |------|------|------|------|
-| 后端框架 | Spring Boot | 4.0.3 | 主框架 |
+| 后端框架 | Spring Boot | 4.0.5 | 主框架（Spring Framework 7.x） |
+| Spring Security | Spring Security | 7.0.3 | JWT 鉴权、方法级权限控制 |
 | ORM | MyBatis | 4.0.1 | XML + 注解混合 |
 | 数据库连接池 | Druid | 1.2.28 | 监控与性能 |
 | 缓存 | Redis | 5.0+ | Token、字典、会话缓存 |
@@ -278,11 +279,13 @@ const res = await getDicts('sys_normal_disable')
 
 ## 6. 测试策略
 
-> **现状说明**：当前项目**未配置前端单元测试/集成测试框架**，后端也**未包含 src/test 目录**。测试主要依靠手动联调和功能验证。
+> **现状说明**：当前项目**未配置前端单元测试/集成测试框架**；后端已配置 JUnit 5 + Mockito + Spring Boot Test，并在 `ruoyi-system` 和 `ruoyi-admin` 模块中编写了单元测试与集成测试。
 
 - 修改代码后，优先通过 `npm run dev` + 后端联调进行功能验证
 - 后端修改后，通过 `mvn clean package -DskipTests` 编译验证
-- 建议新增功能时，同步补充接口级测试（如 Postman 集合）或页面级功能验证步骤
+- **新增后端功能时，必须同步编写 Service 单元测试**；涉及 Controller 改动的，建议补充集成测试
+- 后端测试编写规范与模板见：`docs/test/02-后端测试指南.md`
+- 引入第三方库或从网络复制代码片段前，必须确认 Spring Boot 4 / Spring Security 7 兼容性，详见：`docs/ruoyi/06-SpringBoot4-Spring7-兼容性开发规范.md`
 
 ---
 
@@ -364,4 +367,6 @@ java -jar ruoyi-admin.jar
 - `docs/ruoyi/03-新增页面与接口规范.md`：新增页面、API、Store 的标准模板
 - `docs/ruoyi/04-定制变更与兼容记录.md`：历史变更记录
 - `docs/ruoyi/05-后端迁移与启动指南.md`：后端环境配置与启动方式
+- `docs/ruoyi/06-SpringBoot4-Spring7-兼容性开发规范.md`：Spring Boot 4 / Spring Security 7 兼容性约束与禁止语法清单
+- `docs/test/02-后端测试指南.md`：后端单元测试与集成测试编写规范、模板与排障手册
 - `docs/spec/01-SRS-需求说明书.md`：灵档（个人版）产品需求规格说明书

@@ -244,12 +244,14 @@
             </div>
             <div class="tag-add-row">
               <el-select
+                ref="fileTagSelectRef"
                 v-model="pendingFileTag"
                 filterable
                 allow-create
                 default-first-option
                 placeholder="选择或输入新标签"
                 style="flex: 1;"
+                :filter-method="(val) => { backupFileTag = val }"
                 @keyup.enter="addFileTag"
               >
                 <el-option
@@ -293,12 +295,14 @@
               </div>
               <div class="tag-add-row">
                 <el-select
+                  ref="folderTagSelectRef"
                   v-model="pendingFolderTag"
                   filterable
                   allow-create
                   default-first-option
                   placeholder="选择或输入新标签"
                   style="flex: 1;"
+                  :filter-method="(val) => { backupFolderTag = val }"
                   @keyup.enter="addFolderTag"
                 >
                   <el-option
@@ -328,16 +332,19 @@
       v-model:visible="folderPickerVisible"
       :default-path="form.suggestedPath"
       :folder-tag-map="folderTagMap"
+      :tree-data="realVaultTree"
       @confirm="handlePickerConfirm"
     />
   </div>
 </template>
 
 <script setup name="Upload">
-import { ref, reactive, computed, watch } from 'vue'
+import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { UploadFilled, FolderOpened } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import VaultFolderPicker from '@/components/VaultFolderPicker/index.vue'
+import { getVaultTree, uploadVaultFile, delVaultFile } from '@/api/lingdoc/vault'
+import { listTag, addTag, bindTag, getFolderTags, unbindTagByTarget } from '@/api/lingdoc/tag'
 
 const { proxy } = getCurrentInstance()
 
@@ -345,6 +352,11 @@ const loading = ref(false)
 const open = ref(false)
 const uploadRef = ref(null)
 const formRef = ref(null)
+const fileTagSelectRef = ref(null)
+const folderTagSelectRef = ref(null)
+
+// 真实 Vault 目录树（传给 VaultFolderPicker）
+const realVaultTree = ref([])
 
 // 文件列表
 const fileList = ref([])
@@ -362,25 +374,45 @@ const hasPendingOrganize = computed(() => {
   return fileList.value.some(item => item.status === 'uploaded')
 })
 
-// 预置标签池
-const presetTags = [
-  { tagId: 't1', tagName: '课程', tagColor: '#409EFF' },
-  { tagId: 't2', tagName: '奖学金', tagColor: '#67C23A' },
-  { tagId: 't3', tagName: '实验报告', tagColor: '#E6A23C' },
-  { tagId: 't4', tagName: '简历', tagColor: '#F56C6C' },
-  { tagId: 't5', tagName: '论文', tagColor: '#909399' },
-  { tagId: 't6', tagName: '证书', tagColor: '#9254DE' }
-]
+// 所有可用标签（从后端加载 + 用户创建的）
+const allTags = ref([])
 
-// 所有可用标签（预置 + 用户创建的）
-const allTags = ref([...presetTags])
+/** 页面加载时获取真实目录树和标签列表 */
+async function initData() {
+  try {
+    // 加载目录树
+    const treeRes = await getVaultTree()
+    if (treeRes.code === 200 && treeRes.data) {
+      realVaultTree.value = convertTreeData(treeRes.data)
+    }
+    // 加载标签列表
+    const tagRes = await listTag()
+    if (tagRes.code === 200 && tagRes.data) {
+      allTags.value = tagRes.data.map(t => ({
+        tagId: t.tagId,
+        tagName: t.tagName,
+        tagColor: t.tagColor || '#409EFF'
+      }))
+    }
+  } catch (e) {
+    console.error('初始化数据失败', e)
+  }
+}
+
+/** 将后端目录树格式转换为 VaultFolderPicker 格式 */
+function convertTreeData(nodes) {
+  if (!nodes || !nodes.length) return []
+  return nodes.map(node => ({
+    name: node.label,
+    path: '/' + node.value,
+    children: convertTreeData(node.children)
+  }))
+}
+
+onMounted(initData)
 
 // 目录标签绑定映射（key: 目录路径，value: 标签对象数组）
-const folderTagMap = ref({
-  '/学习资料/大三上/操作系统': [
-    { tagId: 't1', tagName: '课程', tagColor: '#409EFF' }
-  ]
-})
+const folderTagMap = ref({})
 
 // 表单数据
 const form = reactive({
@@ -395,8 +427,10 @@ const form = reactive({
 
 // 弹窗内临时状态
 const pendingFileTag = ref('')
+const backupFileTag = ref('')
 const selectedParentFolder = ref('')
 const pendingFolderTag = ref('')
+const backupFolderTag = ref('')
 const folderPickerVisible = ref(false)
 
 // 父文件夹下拉选项（从 suggestedPath 解析）
@@ -471,7 +505,6 @@ function resolvePathChain(path) {
     current = current + '/' + part
     result.push({ name: part, path: current })
   }
-  // 倒序排列：从最深层级到根目录
   return result.reverse()
 }
 
@@ -503,9 +536,11 @@ function getTagByName(name) {
   return allTags.value.find(t => t.tagName === name)
 }
 
-/** 创建新标签 */
+// 标签颜色池
+const colors = ['#409EFF', '#67C23A', '#E6A23C', '#F56C6C', '#909399', '#9254DE', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4']
+
+/** 创建新标签（仅前端，后端创建请直接调用 addTag） */
 function createNewTag(name) {
-  const colors = ['#409EFF', '#67C23A', '#E6A23C', '#F56C6C', '#909399', '#9254DE', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4']
   const existing = getTagByName(name)
   if (existing) return existing
   const newTag = {
@@ -518,20 +553,40 @@ function createNewTag(name) {
 }
 
 /** 添加文件标签 */
-function addFileTag() {
-  const name = pendingFileTag.value
+async function addFileTag() {
+  // allow-create 模式下点击按钮时 v-model 可能未更新，用 filter-method 保存的 backup 作为 fallback
+  let name = pendingFileTag.value || backupFileTag.value
   if (!name || !name.trim()) return
   const trimmed = name.trim()
   if (form.tagNames.includes(trimmed)) {
     ElMessage.warning('该标签已存在')
     pendingFileTag.value = ''
+    backupFileTag.value = ''
     return
   }
-  if (!getTagByName(trimmed)) {
-    createNewTag(trimmed)
+
+  let tagObj = getTagByName(trimmed)
+  if (!tagObj) {
+    // 预生成 tagId，确保后续 bindTag 有正确 ID
+    const newTagId = 'tag_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9)
+    try {
+      const res = await addTag({
+        tagId: newTagId,
+        tagName: trimmed,
+        tagColor: colors[allTags.value.length % colors.length]
+      })
+      if (res.code === 200) {
+        tagObj = { tagId: newTagId, tagName: trimmed, tagColor: colors[allTags.value.length % colors.length] }
+        allTags.value.push(tagObj)
+      }
+    } catch (e) {
+      tagObj = createNewTag(trimmed)
+    }
   }
+
   form.tagNames.push(trimmed)
   pendingFileTag.value = ''
+  backupFileTag.value = ''
 }
 
 /** 移除文件标签 */
@@ -540,29 +595,78 @@ function removeFileTag(name) {
 }
 
 /** 添加父文件夹标签 */
-function addFolderTag() {
-  const name = pendingFolderTag.value
+async function addFolderTag() {
+  if (!selectedParentFolder.value) {
+    ElMessage.warning('请先选择父文件夹')
+    return
+  }
+
+  // allow-create 模式下点击按钮时 v-model 可能未更新，用 filter-method 保存的 backup 作为 fallback
+  let name = pendingFolderTag.value || backupFolderTag.value
   if (!name || !name.trim()) return
   const trimmed = name.trim()
   if (currentFolderTagNames.value.includes(trimmed)) {
     ElMessage.warning('该标签已存在')
     pendingFolderTag.value = ''
+    backupFolderTag.value = ''
     return
   }
-  if (!getTagByName(trimmed)) {
-    createNewTag(trimmed)
+
+  let tagObj = getTagByName(trimmed)
+  if (!tagObj) {
+    // 预生成 tagId，确保后续 bindTag 有正确 ID
+    const newTagId = 'tag_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9)
+    try {
+      const res = await addTag({
+        tagId: newTagId,
+        tagName: trimmed,
+        tagColor: colors[allTags.value.length % colors.length]
+      })
+      if (res.code === 200) {
+        tagObj = { tagId: newTagId, tagName: trimmed, tagColor: colors[allTags.value.length % colors.length] }
+        allTags.value.push(tagObj)
+      }
+    } catch (e) {
+      ElMessage.error('创建标签失败')
+      return
+    }
   }
-  const tagObj = getTagByName(trimmed)
+
+  // 绑定到后端
+  try {
+    await bindTag({
+      targetType: 'D',
+      targetId: selectedParentFolder.value,
+      tagId: tagObj.tagId
+    })
+  } catch (e) {
+    ElMessage.error('绑定标签失败')
+    return
+  }
+
   const currentTags = folderTagMap.value[selectedParentFolder.value] || []
   folderTagMap.value[selectedParentFolder.value] = [...currentTags, tagObj]
   pendingFolderTag.value = ''
+  backupFolderTag.value = ''
   syncInheritedTags()
 }
 
 /** 移除父文件夹标签 */
-function removeFolderTag(name) {
+async function removeFolderTag(name) {
   const currentTags = folderTagMap.value[selectedParentFolder.value] || []
   folderTagMap.value[selectedParentFolder.value] = currentTags.filter(t => t.tagName !== name)
+
+  // 同步到后端：先解绑该目录所有标签，再重新绑定剩余标签
+  try {
+    await unbindTagByTarget('D', selectedParentFolder.value)
+    const remaining = folderTagMap.value[selectedParentFolder.value] || []
+    for (const tag of remaining) {
+      await bindTag({ targetType: 'D', targetId: selectedParentFolder.value, tagId: tag.tagId })
+    }
+  } catch (e) {
+    ElMessage.error('更新文件夹标签失败')
+  }
+
   syncInheritedTags()
 }
 
@@ -576,11 +680,11 @@ function handlePickerConfirm(path) {
   form.suggestedPath = path
 }
 
-/** 文件变更回调（仅添加到列表，不自动触发规整） */
+/** 文件变更回调（仅添加到前端列表，不上传） */
 function handleFileChange(uploadFile) {
   const raw = uploadFile.raw
   const ext = raw.name.split('.').pop()
-  const fileId = Date.now() + '_' + Math.random().toString(36).substr(2, 9)
+  const fileId = 'temp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9)
 
   const item = {
     fileId: fileId,
@@ -592,14 +696,12 @@ function handleFileChange(uploadFile) {
     suggestedPath: '',
     remark: '',
     tags: [],
-    inheritedTags: []
+    inheritedTags: [],
+    _raw: raw
   }
 
   fileList.value = [...fileList.value, item]
-  ElMessage.success(`已添加文件：${raw.name}`)
-
-  // TODO: 后端就绪后，调用 uploadFile API 将文件上传到服务端临时存储
-  // uploadFile(formData).then(res => { ... })
+  ElMessage.success(`已添加文件：${raw.name}，点击"确认"后保存到 Vault`)
 }
 
 /** 多选框变化 */
@@ -609,78 +711,14 @@ function handleSelectionChange(selection) {
 
 /** 自动规整按钮（单个文件） */
 function handleOrganize(row) {
-  const idx = fileList.value.findIndex(f => f.fileId === row.fileId)
-  if (idx === -1) return
-
-  fileList.value[idx] = { ...fileList.value[idx], status: 'organizing' }
-  ElMessage.info(`正在对 "${row.originalName}" 进行自动规整...`)
-
-  // TODO: 后端就绪后，调用 organizeUpload(row.fileId) 触发 AI 规整
-  // organizeUpload(row.fileId).then(res => { ... })
-
-  // 模拟 AI 解析完成
-  setTimeout(() => {
-    const i = fileList.value.findIndex(f => f.fileId === row.fileId)
-    if (i !== -1) {
-      const mockName = generateMockName(row.originalName, row.fileType)
-      const mockPath = generateMockPath(row.fileType)
-      fileList.value[i] = {
-        ...fileList.value[i],
-        status: 'pending',
-        suggestedName: mockName,
-        suggestedPath: mockPath,
-        inheritedTags: computeInheritedTags(mockPath)
-      }
-      ElMessage.success(`AI 已生成归档建议：${mockName}`)
-    }
-  }, 1500 + Math.random() * 1500)
+  // 预留：后端就绪后对接 organizeUpload API
+  ElMessage.info('自动规整功能开发中...')
 }
 
 /** 批量自动规整 */
 function handleBatchOrganize() {
-  const uploadedList = fileList.value.filter(f => f.status === 'uploaded')
-  if (!uploadedList.length) {
-    ElMessage.warning('没有可自动规整的文件')
-    return
-  }
-
-  ElMessageBox.confirm(
-    `确认对 ${uploadedList.length} 个文件执行自动规整？`,
-    '批量自动规整',
-    { confirmButtonText: '确认', cancelButtonText: '取消', type: 'info' }
-  ).then(() => {
-    uploadedList.forEach(row => {
-      handleOrganize(row)
-    })
-  }).catch(() => {})
-}
-
-/** 生成模拟文件名 */
-function generateMockName(originalName, ext) {
-  const nameWithoutExt = originalName.replace(/\.[^/.]+$/, '')
-  const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '')
-  return `${nameWithoutExt}_${dateStr}.${ext}`
-}
-
-/** 生成模拟路径 */
-function generateMockPath(ext) {
-  const paths = [
-    '/学习资料/大三上/操作系统',
-    '/学习资料/大三上/计算机网络',
-    '/申请材料/奖学金',
-    '/实验报告/计算机组成原理',
-    '/文献资料/论文素材',
-    '/工作文档/实习材料'
-  ]
-  const imagePaths = [
-    '/图片素材/截图',
-    '/图片素材/扫描件',
-    '/图片素材/证书'
-  ]
-  const isImage = ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp'].includes(ext?.toLowerCase())
-  return isImage
-    ? imagePaths[Math.floor(Math.random() * imagePaths.length)]
-    : paths[Math.floor(Math.random() * paths.length)]
+  // 预留：后端就绪后对接 batchOrganizeUpload API
+  ElMessage.info('批量自动规整功能开发中...')
 }
 
 /** 编辑按钮 */
@@ -694,7 +732,6 @@ function handleEdit(row) {
     remark: row.remark || '',
     tagNames: (row.tags || []).map(t => t.tagName)
   })
-  // 设置默认选中的父文件夹为最深一级
   const chain = resolvePathChain(row.suggestedPath)
   selectedParentFolder.value = chain.length > 0 ? chain[0].path : ''
   pendingFileTag.value = ''
@@ -724,94 +761,222 @@ function resetForm() {
   pendingFolderTag.value = ''
 }
 
-/** 提交表单（确认） */
-function submitForm() {
+/** 提交表单（确认）：实际上传到 Vault */
+async function submitForm() {
   if (!form.suggestedName.trim()) {
     ElMessage.warning('文件名不能为空')
     return
   }
 
+  const idx = fileList.value.findIndex(f => f.fileId === form.fileId)
+  if (idx === -1) return
+
+  const row = fileList.value[idx]
   const tagObjects = form.tagNames.map(name => getTagByName(name)).filter(Boolean)
   const inherited = computeInheritedTags(form.suggestedPath)
 
-  const idx = fileList.value.findIndex(f => f.fileId === form.fileId)
-  if (idx !== -1) {
-    fileList.value[idx] = {
-      ...fileList.value[idx],
-      suggestedName: form.suggestedName,
-      suggestedPath: form.suggestedPath,
-      remark: form.remark,
-      tags: tagObjects,
-      inheritedTags: inherited,
-      status: 'confirmed'
+  // 如果文件尚未上传（有 _raw），先上传
+  let fileId = row.fileId
+  if (row._raw) {
+    const fd = new FormData()
+    fd.append('file', row._raw)
+    const subPath = form.suggestedPath ? form.suggestedPath.replace(/^\//, '') : ''
+    if (subPath) fd.append('subPath', subPath)
+
+    try {
+      const res = await uploadVaultFile(fd)
+      if (res.code === 200 && res.data) {
+        fileId = res.data.fileId
+        fileList.value[idx] = {
+          ...fileList.value[idx],
+          fileId: res.data.fileId,
+          originalName: res.data.fileName,
+          vaultPath: res.data.vaultPath,
+          _raw: null
+        }
+      } else {
+        ElMessage.error(res.msg || '上传失败')
+        return
+      }
+    } catch (e) {
+      ElMessage.error('上传失败：' + (e.message || e))
+      return
     }
+  }
+
+  // 先解绑旧标签，避免重复绑定导致唯一键冲突
+  try {
+    await unbindTagByTarget('F', fileId)
+  } catch (e) {
+    console.error('解绑旧标签失败', e)
+  }
+
+  // 保存文件标签
+  if (tagObjects.length > 0) {
+    try {
+      for (const tag of tagObjects) {
+        await bindTag({ targetType: 'F', targetId: fileId, tagId: tag.tagId })
+      }
+    } catch (e) {
+      console.error('保存文件标签失败', e)
+    }
+  }
+
+  fileList.value[idx] = {
+    ...fileList.value[idx],
+    suggestedName: form.suggestedName,
+    suggestedPath: form.suggestedPath,
+    remark: form.remark,
+    tags: tagObjects,
+    inheritedTags: inherited,
+    status: 'confirmed'
   }
 
   open.value = false
   resetForm()
-  ElMessage.success('确认成功，文件已归档')
-
-  // TODO: 后端就绪后，调用 confirmUpload API 将文件实际保存到 Vault
-  // confirmUpload({ fileId, suggestedName, suggestedPath, remark, tags }).then(res => { ... })
+  ElMessage.success('确认成功')
 }
 
-/** 单个确认 */
-function handleConfirm(row) {
-  const msg = row.suggestedPath
-    ? `确认将 "${row.originalName}" 保存到 "${row.suggestedPath}"？`
-    : `确认保存 "${row.originalName}"？（未指定保存路径）`
+/** 单个确认：实际上传到 Vault */
+async function handleConfirm(row) {
+  if (!row._raw) {
+    ElMessage.warning('找不到文件数据')
+    return
+  }
 
-  ElMessageBox.confirm(
-    msg,
-    '确认归档',
-    { confirmButtonText: '确认', cancelButtonText: '取消', type: 'warning' }
-  ).then(() => {
-    const idx = fileList.value.findIndex(f => f.fileId === row.fileId)
-    if (idx !== -1) {
-      fileList.value[idx] = { ...fileList.value[idx], status: 'confirmed' }
+  const idx = fileList.value.findIndex(f => f.fileId === row.fileId)
+  if (idx === -1) return
+
+  // 构建 FormData
+  const formData = new FormData()
+  formData.append('file', row._raw)
+  const subPath = row.suggestedPath ? row.suggestedPath.replace(/^\//, '') : ''
+  if (subPath) {
+    formData.append('subPath', subPath)
+  }
+
+  try {
+    const res = await uploadVaultFile(formData)
+    if (res.code === 200 && res.data) {
+      const result = res.data
+      // 更新文件信息
+      fileList.value[idx] = {
+        ...fileList.value[idx],
+        fileId: result.fileId,
+        originalName: result.fileName,
+        suggestedName: result.fileName,
+        vaultPath: result.vaultPath,
+        status: 'confirmed',
+        _raw: null
+      }
+
+      // 保存文件标签
+      if (row.tags && row.tags.length > 0) {
+        for (const tag of row.tags) {
+          await bindTag({ targetType: 'F', targetId: result.fileId, tagId: tag.tagId })
+        }
+      }
+
+      ElMessage.success('文件已保存到 Vault')
+    } else {
+      ElMessage.error(res.msg || '上传失败')
     }
-    ElMessage.success('确认成功，文件已归档')
-    // TODO: 后端就绪后，调用 confirmUpload API
-  }).catch(() => {})
+  } catch (e) {
+    ElMessage.error('上传失败：' + (e.message || e))
+  }
 }
 
 /** 删除单个 */
-function handleDelete(row) {
-  proxy.$modal.confirm(`是否确认删除文件 "${row.originalName}"？`).then(() => {
+async function handleDelete(row) {
+  proxy.$modal.confirm(`是否确认删除文件 "${row.originalName}"？`).then(async () => {
+    // 若已上传到后端（fileId 非 temp_ 开头），先调用后端删除
+    if (row.fileId && !row.fileId.startsWith('temp_')) {
+      try {
+        await delVaultFile(row.fileId)
+      } catch (e) {
+        console.error('后端删除失败', e)
+      }
+    }
     fileList.value = fileList.value.filter(f => f.fileId !== row.fileId)
     ElMessage.success('删除成功')
   }).catch(() => {})
 }
 
 /** 批量确认 */
-function handleBatchConfirm() {
+async function handleBatchConfirm() {
   const pendingList = fileList.value.filter(f => ['uploaded', 'pending'].includes(f.status))
   if (!pendingList.length) {
     ElMessage.warning('没有待确认的文件')
     return
   }
-
-  ElMessageBox.confirm(
-    `确认批量归档 ${pendingList.length} 个文件？`,
-    '批量确认',
-    { confirmButtonText: '确认', cancelButtonText: '取消', type: 'warning' }
-  ).then(() => {
-    fileList.value = fileList.value.map(f =>
-      ['uploaded', 'pending'].includes(f.status) ? { ...f, status: 'confirmed' } : f
-    )
-    ElMessage.success(`成功归档 ${pendingList.length} 个文件`)
-    // TODO: 后端就绪后，调用 batchConfirmUpload API
-  }).catch(() => {})
+  let successCount = 0
+  let failCount = 0
+  for (const row of pendingList) {
+    const idx = fileList.value.findIndex(f => f.fileId === row.fileId)
+    if (idx === -1) continue
+    if (!row._raw) {
+      // 没有原始文件数据，仅改状态
+      fileList.value[idx] = { ...fileList.value[idx], status: 'confirmed' }
+      successCount++
+      continue
+    }
+    const formData = new FormData()
+    formData.append('file', row._raw)
+    const subPath = row.suggestedPath ? row.suggestedPath.replace(/^\//, '') : ''
+    if (subPath) formData.append('subPath', subPath)
+    try {
+      const res = await uploadVaultFile(formData)
+      if (res.code === 200 && res.data) {
+        const result = res.data
+        fileList.value[idx] = {
+          ...fileList.value[idx],
+          fileId: result.fileId,
+          originalName: result.fileName,
+          suggestedName: result.fileName,
+          vaultPath: result.vaultPath,
+          status: 'confirmed',
+          _raw: null
+        }
+        // 保存文件标签
+        if (row.tags && row.tags.length > 0) {
+          for (const tag of row.tags) {
+            await bindTag({ targetType: 'F', targetId: result.fileId, tagId: tag.tagId })
+          }
+        }
+        successCount++
+      } else {
+        failCount++
+        fileList.value[idx] = { ...fileList.value[idx], status: 'failed' }
+      }
+    } catch (e) {
+      failCount++
+      fileList.value[idx] = { ...fileList.value[idx], status: 'failed' }
+    }
+  }
+  if (failCount > 0) {
+    ElMessage.warning(`成功 ${successCount} 个，失败 ${failCount} 个`)
+  } else {
+    ElMessage.success(`成功归档 ${successCount} 个文件`)
+  }
 }
 
 /** 批量删除 */
-function handleBatchDelete() {
+async function handleBatchDelete() {
   if (!selectedIds.value.length) {
     ElMessage.warning('请至少选择一项')
     return
   }
-
-  proxy.$modal.confirm(`是否确认删除选中的 ${selectedIds.value.length} 个文件？`).then(() => {
+  proxy.$modal.confirm(`是否确认删除选中的 ${selectedIds.value.length} 个文件？`).then(async () => {
+    for (const id of selectedIds.value) {
+      const row = fileList.value.find(f => f.fileId === id)
+      if (row && row.fileId && !row.fileId.startsWith('temp_')) {
+        try {
+          await delVaultFile(row.fileId)
+        } catch (e) {
+          console.error('后端删除失败', e)
+        }
+      }
+    }
     fileList.value = fileList.value.filter(f => !selectedIds.value.includes(f.fileId))
     selectedIds.value = []
     ElMessage.success('删除成功')
@@ -819,12 +984,21 @@ function handleBatchDelete() {
 }
 
 /** 清空列表 */
-function handleClean() {
+async function handleClean() {
   if (!fileList.value.length) {
     ElMessage.warning('列表已为空')
     return
   }
-  proxy.$modal.confirm('是否确认清空所有已上传文件？').then(() => {
+  proxy.$modal.confirm('是否确认清空所有已上传文件？').then(async () => {
+    for (const row of fileList.value) {
+      if (row.fileId && !row.fileId.startsWith('temp_')) {
+        try {
+          await delVaultFile(row.fileId)
+        } catch (e) {
+          console.error('后端删除失败', e)
+        }
+      }
+    }
     fileList.value = []
     selectedIds.value = []
     ElMessage.success('清空成功')

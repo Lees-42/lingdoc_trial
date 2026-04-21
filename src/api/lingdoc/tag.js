@@ -1,18 +1,23 @@
 import request from '@/utils/request'
 
-// ==================== 标签管理 ====================
-
-// 获取所有标签
-// 权限: lingdoc:tag:list
-export function listTag() {
+// 查询标签列表
+export function listTag(query) {
   return request({
     url: '/lingdoc/tag/list',
+    method: 'get',
+    params: query
+  })
+}
+
+// 获取标签详情
+export function getTag(tagId) {
+  return request({
+    url: '/lingdoc/tag/' + tagId,
     method: 'get'
   })
 }
 
-// 新建标签
-// 权限: lingdoc:tag:add
+// 新增标签
 export function addTag(data) {
   return request({
     url: '/lingdoc/tag',
@@ -21,8 +26,24 @@ export function addTag(data) {
   })
 }
 
+// 修改标签
+export function updateTag(data) {
+  return request({
+    url: '/lingdoc/tag',
+    method: 'put',
+    data: data
+  })
+}
+
+// 删除标签
+export function delTag(tagId) {
+  return request({
+    url: '/lingdoc/tag/' + tagId,
+    method: 'delete'
+  })
+}
+
 // 获取文件的标签（含继承）
-// 权限: lingdoc:tag:list
 export function getFileTags(fileId) {
   return request({
     url: '/lingdoc/tag/file/' + fileId,
@@ -30,8 +51,7 @@ export function getFileTags(fileId) {
   })
 }
 
-// 绑定标签到文件/目录
-// 权限: lingdoc:tag:edit
+// 绑定标签
 export function bindTag(data) {
   return request({
     url: '/lingdoc/tag/bind',
@@ -41,10 +61,27 @@ export function bindTag(data) {
 }
 
 // 解绑标签
-// 权限: lingdoc:tag:edit
 export function unbindTag(bindingId) {
   return request({
     url: '/lingdoc/tag/bind/' + bindingId,
     method: 'delete'
+  })
+}
+
+// 获取目录的标签（含继承）
+export function getFolderTags(path) {
+  return request({
+    url: '/lingdoc/tag/folder',
+    method: 'get',
+    params: { path }
+  })
+}
+
+// 按目标批量解绑标签
+export function unbindTagByTarget(targetType, targetId) {
+  return request({
+    url: '/lingdoc/tag/bind/target',
+    method: 'delete',
+    params: { targetType, targetId }
   })
 }
