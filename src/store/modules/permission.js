@@ -36,7 +36,8 @@ const usePermissionStore = defineStore(
         return new Promise(resolve => {
           // 向后端请求路由数据
           getRouters().then(res => {
-            renameMenuTitle(res.data, '智能检索', '灵犀问答')
+            renameMenuTitle(res.data, '智能检索', '灵犀问答') // 将所有的智能检索菜单名称替换为灵犀问答
+            renameMenuTitle(res.data, '关系图谱', '万象星云') // 将所有的关系图谱菜单名称替换为万象星云
             const normalizedData = res.data
             const sidebarRoutes = filterAsyncRouter(JSON.parse(JSON.stringify(normalizedData)))
             const rewriteRoutes = filterAsyncRouter(JSON.parse(JSON.stringify(normalizedData)), false, true)

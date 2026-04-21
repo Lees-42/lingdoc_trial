@@ -6,8 +6,8 @@
         <h1 class="brand-title">灵档</h1>
         <p class="brand-slogan">让文档回到本地，让每一次整理、检索与回溯都更清晰、更可控。</p>
         <div class="hero-actions">
-          <el-button class="main-btn" type="primary" round @click="navigate('/lingdoc/organize')">进入自动规整</el-button>
-          <el-button class="main-btn main-btn--ghost" round @click="navigate('/lingdoc/search')">打开灵犀问答</el-button>
+          <el-button class="main-btn" type="primary" round @click="navigate('/lingdoc/upload')">进入文档上传</el-button>
+          <el-button class="main-btn main-btn--ghost" round @click="navigate('/lingdoc/agent')">打开灵犀问答</el-button>
         </div>
       </div>
       <div class="hero-signal">
@@ -135,7 +135,7 @@ const overviewCards = [
     variant: 'volume'
   },
   {
-    label: '待规整条目',
+    label: '待处理条目',
     value: '32',
     trend: '预计 14 分钟完成',
     variant: 'queue'
@@ -150,17 +150,17 @@ const overviewCards = [
 
 const quickActions = [
   {
-    title: '自动规整',
+    title: '文档上传',
     tag: '整理',
     icon: 'upload',
-    path: '/lingdoc/organize',
+    path: '/lingdoc/upload',
     description: '把零散素材整理成稳定结构，减少后续查找成本。'
   },
   {
     title: '灵犀问答',
     tag: '搜索',
     icon: 'search',
-    path: '/lingdoc/search',
+    path: '/lingdoc/agent',
     description: '按关键词、上下文和使用场景快速定位目标文档。'
   },
   {

@@ -231,7 +231,7 @@ graph TB
 
 **主流程**:
 1. 用户在搜索框用自然语言提问（例如："助教在群里发的那份《实验报告要求》中，最后提交截止时间是什么时候？需要什么格式？"）
-2. 系统通过 PostgreSQL 的 **GIN 全文索引**（`tsvector`）在本地检索与问题相关的文档片段
+2. 系统通过 MySQL 8.0+ 的 **FULLTEXT 全文索引**（`ngram` 解析器）在本地检索与问题相关的文档片段
 3. 将检索到的相关文本片段（已脱敏）传递给阿里千问 API
 4. AI 从文档内容中提取精确答案
 5. 系统返回答案文本，同时附带**引用源文件名称**和**定位到源文件的跳转链接**
@@ -251,8 +251,8 @@ graph TB
 - E3: 用户选择功能模式但缺少对应上下文 → AI 返回通用回答并提示补充信息
 
 **技术细节**:
-- PostgreSQL 全文检索使用 `to_tsvector('chinese', ocr_text)` + GIN 索引
-- 检索结果按 `ts_rank` 排序，取前 5 条最相关片段传给 AI
+- MySQL 全文检索使用 `MATCH(file_name, file_content) AGAINST('关键词' IN NATURAL LANGUAGE MODE)` + `FULLTEXT` + `ngram` 解析器
+- 检索结果按相关性排序，取前 5 条最相关片段传给 AI
 - 多轮对话上下文存储在本地 `chat_session` 表中
 - **MVP 阶段适配**：当前前端实现为纯 mock 对话，历史会话通过 `localStorage` 持久化，功能模式切换为前端状态管理
 
@@ -460,7 +460,7 @@ CREATE TABLE file_search_index (
 | ----------- | -------- | ------------------------ |
 | **OCR处理速度** | ≤5秒/页    | A4图片，300DPI，单线程          |
 | **文件自动规整** | ≤10秒/文件 | 含 OCR + AI 命名分类建议          |
-| **全文搜索**    | ≤1秒      | Vault内100,000个文档，PostgreSQL GIN 索引 |
+| **全文搜索**    | ≤1秒      | Vault内100,000个文档，MySQL FULLTEXT ngram 索引 |
 | **自然语言问答** | ≤3秒      | 含本地检索 + 阿里千问 API 推理    |
 | **关系图谱渲染** | ≤500ms    | 纯前端 ECharts 力导向图渲染，25 节点 + 3 标签 |
 | **界面响应**    | ≤200ms   | 普通笔记本（i5, 8GB）           |
@@ -495,8 +495,8 @@ CREATE TABLE file_search_index (
 | 最终架构组件 | 当前 MVP 适配方案 | 依据文档 |
 |---------|-----------------|------|
 | **Electron 28+ 桌面壳** | 浏览器访问 `http://localhost` | `docs/ruoyi/01-当前项目结构说明.md` |
-| **PostgreSQL 12+ 主数据库** | MySQL 8.0+ | `docs/ruoyi/05-后端迁移与启动指南.md` |
-| **PostgreSQL GIN 全文检索** | MySQL 全文索引 / 普通 LIKE 查询 | 当前后端使用 MySQL |
+| **MySQL 8.0+ 主数据库** | 已最终选型 | `docs/ruoyi/05-后端迁移与启动指南.md` |
+| **MySQL FULLTEXT ngram 全文检索** | 已最终选型 | 当前后端使用 MySQL 8.0+ |
 | **PaddleOCR-json** | MVP 阶段可延后集成，优先支持文本类文件（txt/docx/xlsx） | 简化 MVP 开发范围 |
 | **Keytar 系统密钥链** | 暂用配置文件 / 环境变量存储敏感信息 | Web 环境暂不支持系统密钥链 |
 | **Electron IPC 通信** | 纯 HTTP 通信（Axios） | Web 版无 Electron IPC |
@@ -534,4 +534,4 @@ MVP 阶段可在 MySQL 中创建以下过渡表：
 - `lingdoc_chat_session` — 对话上下文（MVP 阶段暂用 `localStorage` 替代）
 - `lingdoc_audit_log` — 审计日志（含哈希链字段）
 
-以上表结构在迁移到 PostgreSQL 时，字段定义基本保持一致，仅需调整全文索引实现方式。
+以上表结构基于 MySQL 8.0+ 设计，全文索引使用 `ngram` 解析器支持中文检索。

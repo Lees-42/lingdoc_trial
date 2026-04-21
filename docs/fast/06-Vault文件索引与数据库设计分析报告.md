@@ -15,17 +15,17 @@
 | ----------------------------- | -------------------------- | -------------------------------- |
 | `docs/spec/01-SRS-需求说明书.md`   | 15次+，完整定义了物理存储结构、路径规范、命名规则 | ✅ 概念设计完善                         |
 | `docs/fast/01-表格填写助手-产品需求.md` | 5次，参考文档从 Vault 检索          | ⚠️ 未说明 Vault 文件如何被数据库索引          |
-| `docs/fast/02-数据库设计.md`       | 2次，`doc_id` 标注为"Vault文档ID" | ❌ 外键实际指向 `kb_document`（仅AI知识库文档） |
+| `docs/fast/02-数据库设计.md`       | 2次，`doc_id` 标注为"Vault文档ID" | ✅ 外键指向 `lingdoc_file_index.file_id` |
 | `docs/ai/02-AI现有代码与基础设施现状.md` | 0次                         | ❌ AI模块文档未涉及 Vault                |
 
-**核心发现**：Vault 在文档中有完整的**物理层设计**，但**没有任何文档**说明 Vault 中的文件如何在数据库中被索引和检索。`kb_document` 表仅覆盖已上传到 AI 知识库的文档，不能代表 Vault 中的全部文件。
+**核心发现**：Vault 在文档中有完整的**物理层设计**，但**没有任何文档**说明 Vault 中的文件如何在数据库中被索引和检索。此前 `kb_document` 概念仅覆盖已入知识库的文档，不能代表 Vault 中的全部文件；现已废弃 `kb_document`，统一由 `lingdoc_file_index` 索引所有文件，AI 处理状态由 `lingdoc_file_ai_meta` 独立维护。
 
 ### 1.2 MySQL 数据库设计在现有文档中的覆盖情况
 
 | 文档                          | MySQL/数据库设计内容                                                         | 问题                                      |
 | --------------------------- | --------------------------------------------------------------------- | --------------------------------------- |
 | `docs/spec/01-SRS-需求说明书.md` | 已改为 MySQL 8.0+，提及 `file_index` / `file_version` / `file_search_index` | ❌ 只有概念描述，**没有实际建表语句**                   |
-| `docs/fast/02-数据库设计.md`     | 表格助手3张表（任务/字段/参考文档）                                                   | ⚠️ 参考文档外键指向 `kb_document`，漏掉 Vault 普通文件 |
+| `docs/fast/02-数据库设计.md`     | 表格助手3张表（任务/字段/参考文档）                                                   | ✅ 参考文档外键指向 `lingdoc_file_index` |
 | `docs/spec/09-AI模块架构设计.md`  | AI 模块6张表（知识库/文档/分块/向量/会话/消息）                                          | ✅ 完整                                    |
 | `ruoyi-server/sql/`         | 现有3个脚本：主库 / AI模块 / 表格助手模块                                             | ❌ 缺少 Vault 文件索引脚本                       |
 
@@ -38,7 +38,7 @@
 ```
 已存在的数据库表：
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│   sys_user      │     │  kb_document    │     │ lingdoc_form_...│
+│   sys_user      │     │ lingdoc_file_.. │     │ lingdoc_form_...│
 │   (用户表)       │     │  (AI知识库文档)  │     │  (表格助手任务)  │
 └────────┬────────┘     └────────┬────────┘     └────────┬────────┘
          │                       │                       │
@@ -58,7 +58,7 @@
 
 | 需求功能             | 当前数据库支撑                   | 缺失什么                 | 导致的问题                           |
 | ---------------- | ------------------------- | -------------------- | ------------------------------- |
-| **表格填写助手检索参考文档** | `kb_document` 表（仅AI知识库文档） | Vault 全部文件的索引        | 只能检索已上传知识库的文档，Vault 中大量文件漏检     |
+| **表格填写助手检索参考文档** | `lingdoc_file_index` 表（Vault 全部文件） | Vault 全部文件的索引        | 已统一由 `lingdoc_file_index` 覆盖     |
 | **关系图谱展示真实文件**   | 无                         | Vault 文件索引 + 标签字段    | 只能使用 mock 数据，无法接入真实文件           |
 | **自动规整功能归档文件**   | 无                         | `file_index` 表记录归档信息 | AI 规整后文件存入 Vault，但数据库无记录，后续无法检索 |
 | **版本溯源**         | 无                         | `file_version` 表     | 无法记录版本快照的元数据                    |
@@ -85,7 +85,7 @@
 | `file_type` | varchar(32) | 文件类型（pdf/docx/xlsx等） | ✅ |
 | `file_size` | bigint | 文件大小 | ✅ |
 | `checksum` | varchar(64) | MD5/SHA256（去重用） | ✅ |
-| `tag` | varchar(128) | 一级目录标签（学习资料/申请材料/工作文档） | ✅ |
+| `sub_path` | varchar(512) | 子分类路径（如 学习资料/大三上/操作系统/） | ✅ |
 | `sub_path` | varchar(512) | 子分类路径 | ⚪ |
 | `source_type` | char(1) | 来源：0手动上传 1自动规整 2表格助手生成 | ✅ |
 | `ocr_text` | longtext | OCR/解析后的文本内容 | ✅ |
@@ -95,8 +95,8 @@
 
 **索引设计**：
 - 主键：`file_id`
-- 普通索引：`user_id`, `file_type`, `tag`, `checksum`, `source_type`
-- 联合索引：`(user_id, tag)`, `(user_id, file_type, create_time)`
+- 普通索引：`user_id`, `file_type`, `checksum`, `source_type`
+- 联合索引：`(user_id, file_type, create_time)`
 - 唯一索引：`(user_id, checksum)` — 同用户下文件去重
 - 全文索引：`file_name` (FULLTEXT ngram), `ocr_text` (FULLTEXT ngram)
 
@@ -118,44 +118,25 @@
 
 **索引**：`file_id`, `version_no`, `create_time`
 
-#### 表C：`lingdoc_file_tag`（文件标签关联表）
+#### 表C：`lingdoc_tag` + `lingdoc_tag_binding`（标签体系）
 
-**作用**：支持多标签体系（不仅限一级目录），支撑关系图谱的多维标签筛选。
+**作用**：支持独立的多标签体系（与目录解耦），支撑关系图谱的多维标签筛选。
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `tag_id` | varchar(64) PK | 标签关联ID |
-| `file_id` | varchar(64) FK → file_index | 文件ID |
-| `tag_name` | varchar(128) | 标签名 |
-| `tag_level` | int | 标签层级（1一级 2二级...） |
-| `is_auto` | char(1) | 是否AI自动提取：0手动 1自动 |
-| `create_time` | datetime | 创建时间 |
+**设计详情**：见 FAST-008 第2节。
 
-**索引**：`file_id`, `tag_name`
+- `lingdoc_tag`：标签定义表（`tag_id`, `tag_name`, `tag_color`, `tag_scope`）
+- `lingdoc_tag_binding`：标签绑定表（`target_type`, `target_id`, `tag_id`, `bind_type`），支持目录标签继承
 
 ### 3.2 需要修改的现有表
 
 #### 修改1：`lingdoc_form_reference`（表格助手参考文档关联表）
 
-**当前问题**：`doc_id` 外键只能指向 `kb_document.doc_id`，漏掉 Vault 中的普通文件。
+**当前问题**：`doc_id` 外键此前指向 `kb_document.doc_id`，概念已废弃。
 
-**修改方案**：新增 `doc_source` 字段标识文档来源
+**修改方案**：`doc_id` 直接指向 `lingdoc_file_index.file_id`，无需 `doc_source` 字段。
 ```sql
-ALTER TABLE lingdoc_form_reference 
-ADD COLUMN `doc_source` char(1) DEFAULT '0' 
-COMMENT '文档来源：0知识库(kb_document) 1Vault文件索引(file_index)';
-```
-
-#### 修改2：`kb_document`（AI知识库文档表）
-
-**当前问题**：与 Vault 文件索引表数据割裂，同一份文件可能在两张表中重复记录。
-
-**修改方案**：新增 `file_index_id` 字段关联 Vault 索引
-```sql
-ALTER TABLE kb_document 
-ADD COLUMN `file_index_id` varchar(64) DEFAULT NULL 
-COMMENT '关联Vault文件索引ID',
-ADD KEY `idx_file_index_id` (`file_index_id`);
+-- lingdoc_form_reference.doc_id 注释更新为：
+-- '文件ID（lingdoc_file_index.file_id）'
 ```
 
 ### 3.3 数据同步机制设计
@@ -180,7 +161,7 @@ ADD KEY `idx_file_index_id` (`file_index_id`);
 | 方案 | 单次查询时间（1000个文件） | 查询方式 |
 |------|--------------------------|---------|
 | 当前：遍历文件系统 | ~200ms ~ 2s | `File.listFiles()` 递归遍历 |
-| 当前：仅查 `kb_document` | ~10ms | 但只能覆盖知识库文档 |
+| 当前：查 `lingdoc_file_index` | ~5ms | 覆盖 Vault 全部文件 |
 | **优化后：查 `lingdoc_file_index`** | **~5ms** | `SELECT ... WHERE user_id=? AND MATCH(file_name,ocr_text) AGAINST(?)` |
 
 ### 4.2 关系图谱标签提取
@@ -188,7 +169,7 @@ ADD KEY `idx_file_index_id` (`file_index_id`);
 | 方案 | 标签提取时间 | 复杂度 |
 |------|-------------|--------|
 | 当前：遍历目录提取一级文件夹 | ~500ms | O(n) 文件系统操作 |
-| **优化后：`SELECT DISTINCT tag`** | **~1ms** | O(1) 索引扫描 |
+| **优化后：`SELECT DISTINCT SUBSTRING_INDEX(sub_path, '/', 1)`** | **~1ms** | O(1) 索引扫描 |
 
 ### 4.3 全文检索（自然语言问答）
 
@@ -209,9 +190,9 @@ ADD KEY `idx_file_index_id` (`file_index_id`);
 ### 文档层面缺失
 - ❌ **Vault 文件主索引表**（`lingdoc_file_index`）—— **最关键缺失**
 - ❌ **文件版本记录表**（`lingdoc_file_version`）
-- ❌ **文件标签关联表**（`lingdoc_file_tag`）
+- ✅ **标签体系**（`lingdoc_tag` + `lingdoc_tag_binding`）
 - ❌ **Vault 目录与数据库的同步策略**
-- ❌ **`kb_document` 与 `file_index` 的关联设计**
+- ✅ **`lingdoc_file_index` 统一索引 + `lingdoc_file_ai_meta` AI 元数据分离**
 
 ### 优先级排序
 
@@ -221,7 +202,7 @@ ADD KEY `idx_file_index_id` (`file_index_id`);
 | **P0** | 设计 `lingdoc_file_version` 表结构 | 版本溯源 |
 | **P1** | 修改 `lingdoc_form_reference` 支持多来源文档 | 表格助手参考文档完整性 |
 | **P1** | 设计 Vault ↔ 数据库同步策略 | 数据一致性 |
-| **P2** | 设计 `lingdoc_file_tag` 表结构 | 关系图谱多标签筛选 |
-| **P2** | 修改 `kb_document` 关联 `file_index` | 避免知识库与Vault元数据重复 |
+| **P1** | 设计 `lingdoc_tag` + `lingdoc_tag_binding` 标签体系 | 关系图谱多标签筛选 |
+| **P2** | 设计 `lingdoc_file_ai_meta` 脚手架 | AI 处理状态独立维护 |
 
 > **最终结论**：将文件及元数据添加到数据库不仅能提高效率（检索从秒级降到毫秒级），更是功能闭环的前提。当前 Vault 只有物理目录而没有数据库索引，导致表格助手、关系图谱、自动规整等功能无法接入真实数据。**数据库层面最紧迫的工作是设计并实现 `lingdoc_file_index` 表**，作为 Vault 所有文件的统一元数据入口。
