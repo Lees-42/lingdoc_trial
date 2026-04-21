@@ -56,17 +56,14 @@ except ImportError:
 OCR_ENGINE = None  # 延迟初始化
 
 
-def get_ocr_engine(use_gpu=False, lang="ch", show_log=False):
+def get_ocr_engine(lang="ch"):
     """获取或初始化 PaddleOCR 引擎（单例模式）"""
     global OCR_ENGINE
     if OCR_ENGINE is None:
         OCR_ENGINE = PaddleOCR(
-            use_angle_cls=True,
             lang=lang,
-            show_log=show_log,
-            use_gpu=use_gpu,
-            det_db_box_thresh=0.5,
-            rec_thresh=0.5
+            text_det_box_thresh=0.5,
+            text_rec_score_thresh=0.5
         )
     return OCR_ENGINE
 
@@ -121,7 +118,7 @@ def convert_docx_to_images(docx_path, dpi=150):
 
 def recognize_image(ocr, image_path, page_num=1):
     """单张图片 OCR 识别"""
-    result = ocr.ocr(image_path, cls=True)
+    result = ocr.ocr(image_path)
 
     lines = []
     if result and result[0]:
