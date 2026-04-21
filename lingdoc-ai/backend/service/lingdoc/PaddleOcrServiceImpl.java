@@ -38,7 +38,7 @@ public class PaddleOcrServiceImpl implements IPaddleOcrService
     private PaddleOcrTaskMapper paddleOcrTaskMapper;
 
     /** PaddleOCR Python 脚本路径 */
-    @Value("${lingdoc.ocr.python.script:lingdoc-ai/backend/python/ocr_service.py}")
+    @Value("${lingdoc.ocr.python.script:lingdoc-ai/python/ocr_service.py}")
     private String pythonScriptPath;
 
     /** Python 可执行文件路径 */

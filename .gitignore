@@ -57,3 +57,5 @@ build/
 .git-lingdoc-ai-backup/
 
 temp_mb/
+venv/
+__pycache__/

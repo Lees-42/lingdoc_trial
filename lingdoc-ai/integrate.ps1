@@ -44,28 +44,33 @@ function Copy-WithLog ($Source, $Destination, $Label) {
 }
 
 # ---------- 1. 前端代码 ----------
-Write-Host "[1/4] 复制前端代码..." -ForegroundColor Cyan
+Write-Host "[1/5] 复制前端代码..." -ForegroundColor Cyan
 Copy-WithLog "frontend/api/ai"     "src/api/ai"     "AI 基础设施 API"
 Copy-WithLog "frontend/api/lingdoc" "src/api/lingdoc" "灵档业务 API"
 Copy-WithLog "frontend/views/lingdoc" "src/views/lingdoc" "AI 业务页面"
 
 # ---------- 2. 后端代码 ----------
 Write-Host ""
-Write-Host "[2/4] 复制后端代码..." -ForegroundColor Cyan
+Write-Host "[2/5] 复制后端代码..." -ForegroundColor Cyan
 Copy-WithLog "backend/controller/lingdoc" "ruoyi-server/ruoyi-admin/src/main/java/com/ruoyi/web/controller/lingdoc" "Controller"
 Copy-WithLog "backend/domain/lingdoc"     "ruoyi-server/ruoyi-system/src/main/java/com/ruoyi/system/domain/lingdoc" "Domain 实体"
 Copy-WithLog "backend/mapper/lingdoc"     "ruoyi-server/ruoyi-system/src/main/java/com/ruoyi/system/mapper/lingdoc" "Mapper 接口"
 Copy-WithLog "backend/service/lingdoc"    "ruoyi-server/ruoyi-system/src/main/java/com/ruoyi/system/service/lingdoc" "Service"
 Copy-WithLog "backend/resources/mapper/lingdoc" "ruoyi-server/ruoyi-system/src/main/resources/mapper/lingdoc" "MyBatis XML"
 
-# ---------- 3. 数据库脚本 ----------
+# ---------- 3. Python OCR 引擎 ----------
 Write-Host ""
-Write-Host "[3/4] 复制数据库脚本..." -ForegroundColor Cyan
+Write-Host "[3/5] 复制 Python OCR 引擎..." -ForegroundColor Cyan
+Copy-WithLog "python" "python" "PaddleOCR Python 服务（需独立安装依赖）"
+
+# ---------- 4. 数据库脚本 ----------
+Write-Host ""
+Write-Host "[4/5] 复制数据库脚本..." -ForegroundColor Cyan
 Copy-WithLog "sql" "ruoyi-server/sql" "SQL 脚本"
 
-# ---------- 4. 文档（可选） ----------
+# ---------- 5. 文档（可选） ----------
 Write-Host ""
-Write-Host "[4/4] 复制文档..." -ForegroundColor Cyan
+Write-Host "[5/5] 复制文档..." -ForegroundColor Cyan
 Copy-WithLog "docs" "docs" "AI 设计文档"
 
 # ---------- 完成 ----------
@@ -75,8 +80,12 @@ Write-Host "  集成完成！" -ForegroundColor Green
 Write-Host "========================================" -ForegroundColor Green
 Write-Host ""
 Write-Host "接下来请执行以下操作：" -ForegroundColor Yellow
-Write-Host "  1. 检查 application.yml 中 springdoc.packages-to-scan 是否包含 com.ruoyi.web.controller.lingdoc" -ForegroundColor White
-Write-Host "  2. 在 MySQL 中执行新增的 SQL 脚本（如尚未执行）" -ForegroundColor White
-Write-Host "  3. 启动后端: cd ruoyi-server && mvn clean package -DskipTests" -ForegroundColor White
-Write-Host "  4. 启动前端: cd ling-doc && npm run dev" -ForegroundColor White
+Write-Host "  1. 在 ling-doc/python/ 目录下安装 Python 依赖:" -ForegroundColor White
+Write-Host "     cd ling-doc/python && python3 -m venv venv" -ForegroundColor White
+Write-Host "     source venv/bin/activate" -ForegroundColor White
+Write-Host "     pip install paddlepaddle paddleocr pymupdf" -ForegroundColor White
+Write-Host "  2. 检查 application.yml 中 springdoc.packages-to-scan 是否包含 com.ruoyi.web.controller.lingdoc" -ForegroundColor White
+Write-Host "  3. 在 MySQL 中执行新增的 SQL 脚本（如尚未执行）" -ForegroundColor White
+Write-Host "  4. 启动后端: cd ruoyi-server && mvn clean package -DskipTests" -ForegroundColor White
+Write-Host "  5. 启动前端: cd ling-doc && npm run dev" -ForegroundColor White
 Write-Host ""
