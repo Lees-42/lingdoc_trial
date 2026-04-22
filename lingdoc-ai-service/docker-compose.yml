@@ -1,0 +1,32 @@
+# =============================================================================
+# LingDoc AI Service - Docker Compose
+# =============================================================================
+# 用途：本地开发/测试环境一键启动
+# 使用方式：docker-compose up -d
+# =============================================================================
+
+version: '3.8'
+
+services:
+  lingdoc-ai-service:
+    build: .
+    container_name: lingdoc-ai-service
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      # 共享上传目录（和主后端共享）
+      - /tmp/lingdoc/uploads:/uploads/lingdoc
+      - /tmp/lingdoc/output:/tmp/lingdoc/output
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/ai/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s  # 首次启动需要加载模型
+
+networks:
+  default:
+    name: lingdoc-network
