@@ -79,7 +79,27 @@ public class LingdocVaultServiceImpl implements ILingdocVaultService
     @Override
     public List<Map<String, Object>> getVaultTree(Long userId)
     {
-        List<String> subPaths = fileIndexMapper.selectDistinctSubPathByUserId(userId);
+        String vaultRoot = userRepoService.getUserRepoPath(userId);
+        Path documentsPath = Paths.get(vaultRoot, "documents");
+        if (!Files.exists(documentsPath))
+        {
+            return new ArrayList<>();
+        }
+        
+        List<String> subPaths = new ArrayList<>();
+        try
+        {
+            Files.walk(documentsPath)
+                .filter(Files::isDirectory)
+                .map(p -> documentsPath.relativize(p).toString().replace("\\", "/"))
+                .filter(s -> !s.isEmpty())
+                .forEach(subPaths::add);
+        }
+        catch (IOException e)
+        {
+            log.error("扫描 Vault 目录结构失败", e);
+        }
+        
         return buildTreeFromSubPaths(subPaths);
     }
 
@@ -269,7 +289,7 @@ public class LingdocVaultServiceImpl implements ILingdocVaultService
         // 更新数据库
         file.setSubPath(targetSubPath);
         file.setAbsPath(newPath.toString());
-        String newVaultPath = targetSubPath + "/" + file.getFileName();
+        String newVaultPath = StringUtils.isEmpty(targetSubPath) ? file.getFileName() : targetSubPath + "/" + file.getFileName();
         file.setVaultPath(newVaultPath);
         
         return fileIndexMapper.updateLingdocFileIndex(file);

@@ -2,6 +2,8 @@ package com.ruoyi.web.controller.lingdoc;
 
 import java.util.List;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -31,6 +33,8 @@ import com.ruoyi.system.service.lingdoc.ILingdocTagService;
 @RequestMapping("/lingdoc/tag")
 public class LingdocTagController extends BaseController
 {
+    private static final Logger log = LoggerFactory.getLogger(LingdocTagController.class);
+
     @Autowired
     private ILingdocTagService tagService;
 
@@ -142,10 +146,23 @@ public class LingdocTagController extends BaseController
      */
     @PreAuthorize("@ss.hasPermi('lingdoc:tag:list')")
     @GetMapping("/folder")
-    public AjaxResult folderTags(@RequestParam("path") String path)
+    public AjaxResult folderTags(@RequestParam(value = "path", required = false, defaultValue = "/") String path)
     {
-        List<Map<String, Object>> tags = tagService.selectTagsByTarget("D", path);
-        return AjaxResult.success(tags);
+        try
+        {
+            List<Map<String, Object>> tags = tagService.selectTagsByTarget("D", path);
+            return AjaxResult.success(tags);
+        }
+        catch (NumberFormatException e)
+        {
+            log.error("目录标签查询参数类型错误: path={}, 错误信息: {}", path, e.getMessage(), e);
+            return AjaxResult.error("目录路径参数无效: " + path);
+        }
+        catch (Exception e)
+        {
+            log.error("目录标签查询失败: path={}, 错误信息: {}", path, e.getMessage(), e);
+            return AjaxResult.error("查询目录标签失败: " + e.getMessage());
+        }
     }
 
     /**
@@ -168,7 +185,8 @@ public class LingdocTagController extends BaseController
     public AjaxResult unbindByTarget(@RequestParam("targetType") String targetType,
                                      @RequestParam("targetId") String targetId)
     {
-        return toAjax(tagService.deleteLingdocTagBindingByTarget(targetType, targetId));
+        int result = tagService.deleteLingdocTagBindingByTarget(targetType, targetId);
+        return AjaxResult.success(result);
     }
 
     /**

@@ -81,9 +81,9 @@ const expandedKeys = ref([])
 watch(() => props.visible, (val) => {
   dialogVisible.value = val
   if (val) {
-    selectedPath.value = props.defaultPath || ''
+    selectedPath.value = props.defaultPath !== null && props.defaultPath !== undefined ? props.defaultPath : ''
     nextTick(() => {
-      if (treeRef.value && selectedPath.value) {
+      if (treeRef.value && selectedPath.value !== null && selectedPath.value !== undefined) {
         treeRef.value.setCurrentKey(selectedPath.value)
       }
     })
@@ -96,61 +96,67 @@ watch(dialogVisible, (val) => {
   }
 })
 
-// Mock 目录树数据
+// Mock 目录树数据（路径格式与后端一致：无前导斜杠，根目录为 ''）
 const mockTreeData = [
   {
-    name: '学习资料',
-    path: '/学习资料',
+    name: '根目录',
+    path: '',
     children: [
       {
-        name: '大三上',
-        path: '/学习资料/大三上',
+        name: '学习资料',
+        path: '学习资料',
         children: [
-          { name: '操作系统', path: '/学习资料/大三上/操作系统', children: [] },
-          { name: '计算机网络', path: '/学习资料/大三上/计算机网络', children: [] }
+          {
+            name: '大三上',
+            path: '学习资料/大三上',
+            children: [
+              { name: '操作系统', path: '学习资料/大三上/操作系统', children: [] },
+              { name: '计算机网络', path: '学习资料/大三上/计算机网络', children: [] }
+            ]
+          },
+          {
+            name: '大三下',
+            path: '学习资料/大三下',
+            children: []
+          }
         ]
       },
       {
-        name: '大三下',
-        path: '/学习资料/大三下',
+        name: '申请材料',
+        path: '申请材料',
+        children: [
+          { name: '奖学金', path: '申请材料/奖学金', children: [] },
+          { name: '实习', path: '申请材料/实习', children: [] }
+        ]
+      },
+      {
+        name: '实验报告',
+        path: '实验报告',
+        children: [
+          { name: '计算机组成原理', path: '实验报告/计算机组成原理', children: [] }
+        ]
+      },
+      {
+        name: '文献资料',
+        path: '文献资料',
         children: []
+      },
+      {
+        name: '工作文档',
+        path: '工作文档',
+        children: [
+          { name: '实习材料', path: '工作文档/实习材料', children: [] }
+        ]
+      },
+      {
+        name: '图片素材',
+        path: '图片素材',
+        children: [
+          { name: '截图', path: '图片素材/截图', children: [] },
+          { name: '扫描件', path: '图片素材/扫描件', children: [] },
+          { name: '证书', path: '图片素材/证书', children: [] }
+        ]
       }
-    ]
-  },
-  {
-    name: '申请材料',
-    path: '/申请材料',
-    children: [
-      { name: '奖学金', path: '/申请材料/奖学金', children: [] },
-      { name: '实习', path: '/申请材料/实习', children: [] }
-    ]
-  },
-  {
-    name: '实验报告',
-    path: '/实验报告',
-    children: [
-      { name: '计算机组成原理', path: '/实验报告/计算机组成原理', children: [] }
-    ]
-  },
-  {
-    name: '文献资料',
-    path: '/文献资料',
-    children: []
-  },
-  {
-    name: '工作文档',
-    path: '/工作文档',
-    children: [
-      { name: '实习材料', path: '/工作文档/实习材料', children: [] }
-    ]
-  },
-  {
-    name: '图片素材',
-    path: '/图片素材',
-    children: [
-      { name: '截图', path: '/图片素材/截图', children: [] },
-      { name: '扫描件', path: '/图片素材/扫描件', children: [] },
-      { name: '证书', path: '/图片素材/证书', children: [] }
     ]
   }
 ]
@@ -158,8 +164,16 @@ const mockTreeData = [
 // 目录树数据：优先使用外部传入的真实数据
 const vaultTree = ref([...mockTreeData])
 
+function wrapRootNode(nodes) {
+  if (!nodes || !nodes.length) return [{ name: '根目录', path: '/', children: [] }]
+  // 若传入数据已包含根目录（path='/'），直接返回
+  if (nodes.some(n => n.path === '/')) return nodes
+  return [{ name: '根目录', path: '/', children: nodes }]
+}
+
 watch(() => props.treeData, (val) => {
-  vaultTree.value = val === null || val === undefined ? [...mockTreeData] : val
+  const raw = val === null || val === undefined ? mockTreeData[0].children : val
+  vaultTree.value = wrapRootNode(raw)
 }, { immediate: true })
 
 function injectTags(nodes) {
@@ -177,7 +191,7 @@ watch([() => props.folderTagMap, vaultTree], () => {
 }, { deep: true })
 
 function initExpandedKeys() {
-  if (!props.defaultPath) {
+  if (!props.defaultPath && props.defaultPath !== '/') {
     expandedKeys.value = []
     return
   }
@@ -202,7 +216,7 @@ function handleNodeClick(data) {
 }
 
 function handleConfirm() {
-  if (!selectedPath.value) {
+  if (selectedPath.value === null || selectedPath.value === undefined) {
     ElMessage.warning('请选择保存目录')
     return
   }

@@ -25,19 +25,15 @@
       @vault-change="handleVaultChange"
     />
 
-    <!-- 三栏布局 -->
-    <el-row :gutter="8" class="vault-main">
-      <!-- 左侧目录树 -->
-      <el-col :span="5" class="vault-sidebar">
+    <!-- 两栏可调布局 -->
+    <div class="vault-main" @mouseup="stopResize" @mousemove="onResize">
+      <!-- 左侧：目录树 + 文件列表 -->
+      <div class="vault-sidebar" :style="{ width: sidebarWidth + 'px' }">
         <VaultFileTree
           :tree-data="state.treeData"
           :loading="state.treeLoading"
           @node-click="handleTreeNodeClick"
         />
-      </el-col>
-
-      <!-- 中间文件列表 -->
-      <el-col :span="10" class="vault-content">
         <VaultFileList
           :file-list="state.fileList"
           :loading="state.fileLoading"
@@ -52,18 +48,23 @@
           @delete="handleDelete"
           @download="handleDownload"
         />
-      </el-col>
+      </div>
+
+      <!-- 拖拽分隔条 -->
+      <div class="vault-resizer" @mousedown="startResize">
+        <div class="resizer-line" />
+      </div>
 
       <!-- 右侧预览/详情 -->
-      <el-col :span="9" class="vault-preview">
+      <div class="vault-preview">
         <VaultFilePreview
           :current-file="state.currentFile"
           :preview-content="state.previewContent"
           :loading="state.previewLoading"
           @enlarge="handleEnlargePreview"
         />
-      </el-col>
-    </el-row>
+      </div>
+    </div>
 
     <!-- 放大预览弹窗 -->
     <VaultPreviewDialog
@@ -149,6 +150,7 @@ import {
   uploadVaultFile,
   listVaultRepos
 } from '@/api/lingdoc/vault'
+import { getFileTags, getFolderTags } from '@/api/lingdoc/tag'
 import useVaultStore from '@/store/modules/vault'
 import VaultToolbar from './components/VaultToolbar.vue'
 import VaultFileTree from './components/VaultFileTree.vue'
@@ -193,12 +195,72 @@ const state = reactive({
 
 const uploadRef = ref(null)
 
+// 左侧边栏宽度（可拖拽调整，持久化到 localStorage）
+const sidebarWidth = ref(parseInt(localStorage.getItem('vaultSidebarWidth')) || 420)
+const isResizing = ref(false)
+
+function startResize(e) {
+  isResizing.value = true
+  e.preventDefault()
+}
+function onResize(e) {
+  if (!isResizing.value) return
+  const newWidth = e.clientX
+  const minW = 300
+  const maxW = window.innerWidth * 0.65
+  if (newWidth >= minW && newWidth <= maxW) {
+    sidebarWidth.value = newWidth
+  }
+}
+function stopResize() {
+  if (isResizing.value) {
+    isResizing.value = false
+    localStorage.setItem('vaultSidebarWidth', String(sidebarWidth.value))
+  }
+}
+
+/** 为目录树节点递归注入文件夹标签 */
+async function injectFolderTags(nodes) {
+  if (!nodes || !nodes.length) return
+  await Promise.all(
+    nodes.map(async (node) => {
+      try {
+        const res = await getFolderTags(node.value)
+        if (res.code === 200 && res.data) {
+          node.tags = res.data.map(t => ({
+            tagId: t.tagId,
+            tagName: t.tagName,
+            tagColor: t.tagColor || '#409EFF'
+          }))
+        }
+      } catch (e) {
+        console.error('加载文件夹标签失败', node.value, e)
+      }
+      if (node.children && node.children.length) {
+        try {
+          await injectFolderTags(node.children)
+        } catch (e) {
+          console.error('递归加载子目录标签失败', e)
+        }
+      }
+    })
+  )
+}
+
 /** 加载目录树 */
 async function loadTree() {
   state.treeLoading = true
   try {
     const res = await getVaultTree()
-    state.treeData = res.data || []
+    const children = res.data || []
+    // 包装显式根目录节点
+    const rootNode = {
+      label: '根目录',
+      value: '/',
+      children: children
+    }
+    await injectFolderTags([rootNode])
+    state.treeData = [rootNode]
   } catch (e) {
     ElMessage.error('加载目录树失败')
   } finally {
@@ -206,13 +268,28 @@ async function loadTree() {
   }
 }
 
-/** 加载文件列表 */
+/** 加载文件列表（并并行查询每个文件的标签） */
 async function loadFiles() {
   state.fileLoading = true
   try {
     const res = await listVaultFiles(state.queryParams)
-    state.fileList = res.rows || []
+    const fileList = res.rows || []
     state.total = res.total || 0
+    // 并行查询文件标签
+    await Promise.all(
+      fileList.map(async (file) => {
+        try {
+          const tagRes = await getFileTags(file.fileId)
+          if (tagRes.code === 200 && tagRes.data) {
+            file.tags = tagRes.data.filter(t => t.bindType === '0')
+            file.inheritedTags = tagRes.data.filter(t => t.bindType === '1')
+          }
+        } catch (e) {
+          console.error('加载文件标签失败', file.fileId, e)
+        }
+      })
+    )
+    state.fileList = fileList
   } catch (e) {
     ElMessage.error('加载文件列表失败')
   } finally {
@@ -252,6 +329,14 @@ async function handleFileClick(file) {
       state.previewContent = res.data.content || ''
     } else {
       state.previewContent = res.msg || '无法预览此文件'
+    }
+    // 若文件尚无标签数据，补查询一次
+    if (!file.tags && !file.inheritedTags) {
+      const tagRes = await getFileTags(file.fileId)
+      if (tagRes.code === 200 && tagRes.data) {
+        file.tags = tagRes.data.filter(t => t.bindType === '0')
+        file.inheritedTags = tagRes.data.filter(t => t.bindType === '1')
+      }
     }
   } catch (e) {
     state.previewContent = '预览加载失败'
@@ -306,7 +391,8 @@ async function handleSync() {
 /** 新建文件夹 */
 async function handleCreateFolder(folderName) {
   try {
-    const subPath = state.selectedNode ? state.selectedNode.value + '/' + folderName : folderName
+    const parentPath = state.selectedNode ? state.selectedNode.value : '/'
+    const subPath = parentPath === '/' ? folderName : parentPath + '/' + folderName
     await createVaultFolder({ subPath })
     ElMessage.success('文件夹创建成功')
     await loadTree()
@@ -484,13 +570,41 @@ onMounted(() => {
 .vault-main {
   flex: 1;
   overflow: hidden;
-  margin-top: 8px !important;
+  margin-top: 8px;
+  display: flex;
 }
-.vault-sidebar,
-.vault-content,
-.vault-preview {
+.vault-sidebar {
   height: 100%;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+.vault-preview {
+  flex: 1;
+  height: 100%;
+  overflow: hidden;
+  min-width: 260px;
+}
+.vault-resizer {
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: transparent;
+  transition: background 0.2s;
+}
+.vault-resizer:hover {
+  background: #e4e7ed;
+}
+.resizer-line {
+  width: 2px;
+  height: 40px;
+  border-radius: 1px;
+  background: #c0c4cc;
 }
 
 .upload-icon {

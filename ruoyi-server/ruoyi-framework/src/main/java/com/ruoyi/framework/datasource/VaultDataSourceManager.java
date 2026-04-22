@@ -178,6 +178,38 @@ public class VaultDataSourceManager
             }
             log.info("Vault SQLite 数据库初始化完成");
         }
+
+        // 初始化后验证关键表是否存在
+        verifyTableStructure(dataSource);
+    }
+
+    /**
+     * 验证关键表结构是否正确存在
+     * 防止因初始化脚本问题导致表缺失
+     */
+    private static void verifyTableStructure(SQLiteDataSource dataSource) throws Exception
+    {
+        String[] requiredTables = { "lingdoc_file_index", "lingdoc_tag_binding", "lingdoc_tag" };
+
+        try (Connection conn = dataSource.getConnection(); Statement stmt = conn.createStatement())
+        {
+            for (String tableName : requiredTables)
+            {
+                // SQLite 检查表存在性
+                String sql = "SELECT name FROM sqlite_master WHERE type='table' AND name='" + tableName + "'";
+                if (!stmt.executeQuery(sql).next())
+                {
+                    String errorMsg = "Vault 数据库缺少必要表: " + tableName;
+                    log.error(errorMsg);
+                    throw new RuntimeException(errorMsg);
+                }
+                else
+                {
+                    log.debug("验证表存在: {}", tableName);
+                }
+            }
+            log.info("Vault SQLite 表结构验证成功");
+        }
     }
 
 

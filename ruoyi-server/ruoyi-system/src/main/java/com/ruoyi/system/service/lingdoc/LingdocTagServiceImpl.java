@@ -30,6 +30,9 @@ public class LingdocTagServiceImpl implements ILingdocTagService
     @Autowired
     private LingdocTagBindingMapper tagBindingMapper;
 
+    @Autowired
+    private LingdocFileIndexMapper fileIndexMapper;
+
     @Override
     public LingdocTag selectLingdocTagById(String tagId)
     {
@@ -113,38 +116,58 @@ public class LingdocTagServiceImpl implements ILingdocTagService
             }
         }
         
-        // 如果是文件，查询父目录的继承标签
+        // 如果是文件，查询父目录的继承标签（含根目录）
         if ("F".equals(targetType))
         {
             LingdocFileIndex file = fileIndexMapper.selectLingdocFileIndexById(targetId);
-            if (file != null && StringUtils.isNotEmpty(file.getSubPath()))
+            if (file != null)
             {
-                String subPath = file.getSubPath();
-                // 拆分父目录路径链，逐级查询标签
-                String[] parts = subPath.split("/");
-                String currentPath = "";
-                for (int i = 0; i < parts.length; i++)
+                // 先查询根目录标签（target_id = '/'）
+                List<LingdocTagBinding> rootBindings = tagBindingMapper.selectLingdocTagBindingByTarget("D", "/");
+                for (LingdocTagBinding binding : rootBindings)
                 {
-                    String part = parts[i].trim();
-                    if (StringUtils.isEmpty(part))
+                    LingdocTag tag = tagMapper.selectLingdocTagById(binding.getTagId());
+                    if (tag != null && !containsTagId(result, tag.getTagId()))
                     {
-                        continue;
+                        Map<String, Object> item = new HashMap<>();
+                        item.put("tagId", tag.getTagId());
+                        item.put("tagName", tag.getTagName());
+                        item.put("tagColor", tag.getTagColor());
+                        item.put("bindType", "1"); // 1 = 继承
+                        item.put("bindingId", binding.getBindingId());
+                        result.add(item);
                     }
-                    currentPath = StringUtils.isEmpty(currentPath) ? part : currentPath + "/" + part;
-                    
-                    List<LingdocTagBinding> inheritedBindings = tagBindingMapper.selectLingdocTagBindingByTarget("D", currentPath);
-                    for (LingdocTagBinding binding : inheritedBindings)
+                }
+                
+                // 再逐级查询父目录标签链
+                String subPath = file.getSubPath();
+                if (StringUtils.isNotEmpty(subPath))
+                {
+                    String[] parts = subPath.split("/");
+                    String currentPath = "";
+                    for (int i = 0; i < parts.length; i++)
                     {
-                        LingdocTag tag = tagMapper.selectLingdocTagById(binding.getTagId());
-                        if (tag != null && !containsTagId(result, tag.getTagId()))
+                        String part = parts[i].trim();
+                        if (StringUtils.isEmpty(part))
                         {
-                            Map<String, Object> item = new HashMap<>();
-                            item.put("tagId", tag.getTagId());
-                            item.put("tagName", tag.getTagName());
-                            item.put("tagColor", tag.getTagColor());
-                            item.put("bindType", "1"); // 1 = 继承
-                            item.put("bindingId", binding.getBindingId());
-                            result.add(item);
+                            continue;
+                        }
+                        currentPath = StringUtils.isEmpty(currentPath) ? part : currentPath + "/" + part;
+                        
+                        List<LingdocTagBinding> inheritedBindings = tagBindingMapper.selectLingdocTagBindingByTarget("D", currentPath);
+                        for (LingdocTagBinding binding : inheritedBindings)
+                        {
+                            LingdocTag tag = tagMapper.selectLingdocTagById(binding.getTagId());
+                            if (tag != null && !containsTagId(result, tag.getTagId()))
+                            {
+                                Map<String, Object> item = new HashMap<>();
+                                item.put("tagId", tag.getTagId());
+                                item.put("tagName", tag.getTagName());
+                                item.put("tagColor", tag.getTagColor());
+                                item.put("bindType", "1"); // 1 = 继承
+                                item.put("bindingId", binding.getBindingId());
+                                result.add(item);
+                            }
                         }
                     }
                 }

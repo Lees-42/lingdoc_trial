@@ -209,10 +209,30 @@ public class LingdocVaultController extends BaseController
     @GetMapping("/files")
     public TableDataInfo files(LingdocFileIndex query)
     {
-        query.setUserId(getUserId());
-        startPage();
-        List<LingdocFileIndex> list = vaultService.selectLingdocFileIndexList(query);
-        return getDataTable(list);
+        try
+        {
+            query.setUserId(getUserId());
+            // tansParams 会过滤空字符串；前端根目录用 '/' 表示，需映射为 '' 以匹配数据库 sub_path
+            if (query.getSubPath() == null || "/".equals(query.getSubPath()))
+            {
+                query.setSubPath("");
+            }
+            startPage();
+            List<LingdocFileIndex> list = vaultService.selectLingdocFileIndexList(query);
+            return getDataTable(list);
+        }
+        catch (NumberFormatException e)
+        {
+            log.error("文件列表查询参数类型错误: subPath={}, 错误信息: {}", 
+                    query.getSubPath(), e.getMessage(), e);
+            throw new RuntimeException("查询参数无效，请检查目录路径是否正确。如问题持续，请尝试重新初始化仓库", e);
+        }
+        catch (Exception e)
+        {
+            log.error("文件列表查询失败: subPath={}, userId={}, 错误信息: {}", 
+                    query.getSubPath(), query.getUserId(), e.getMessage(), e);
+            throw new RuntimeException("查询文件列表失败: " + e.getMessage(), e);
+        }
     }
 
     /**

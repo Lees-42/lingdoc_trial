@@ -35,8 +35,33 @@
         <div class="info-item"><label>大小：</label>{{ formatSize(currentFile.fileSize) }}</div>
       </div>
 
-      <!-- 元数据 -->
+      <!-- 标签区块 -->
+      <div class="tag-section">
+        <div class="info-item"><label>标签：</label></div>
+        <div class="tag-list">
+          <el-tag
+            v-for="tag in currentFile.tags"
+            :key="tag.tagId"
+            size="small"
+            :color="tag.tagColor"
+            effect="dark"
+            class="file-tag"
+          >{{ tag.tagName }}</el-tag>
+          <el-tag
+            v-for="tag in currentFile.inheritedTags"
+            :key="'inherited_' + tag.tagId"
+            size="small"
+            :color="tag.tagColor"
+            effect="plain"
+            class="file-tag inherited"
+          >{{ tag.tagName }}</el-tag>
+          <span v-if="!currentFile.tags?.length && !currentFile.inheritedTags?.length" class="no-tag">暂无标签</span>
+        </div>
+      </div>
+
       <el-divider />
+
+      <!-- 元数据 -->
       <div class="meta-info">
         <div class="info-item"><label>路径：</label>{{ currentFile.vaultPath }}</div>
         <div class="info-item"><label>来源：</label>{{ sourceTypeName(currentFile.sourceType) }}</div>
@@ -140,6 +165,26 @@ function sourceTypeName(type) {
 .file-info {
   text-align: center;
   padding: 24px;
+}
+.tag-section {
+  padding: 8px 0;
+}
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+.file-tag {
+  border: none;
+  color: #fff;
+}
+.file-tag.inherited {
+  opacity: 0.75;
+}
+.no-tag {
+  color: #c0c4cc;
+  font-size: 13px;
 }
 .meta-info {
   padding: 8px 0;

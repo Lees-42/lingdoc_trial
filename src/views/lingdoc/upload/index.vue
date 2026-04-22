@@ -255,7 +255,7 @@
                 @keyup.enter="addFileTag"
               >
                 <el-option
-                  v-for="tag in allTags"
+                  v-for="tag in fileTagOptions"
                   :key="tag.tagId"
                   :label="tag.tagName"
                   :value="tag.tagName"
@@ -279,7 +279,7 @@
                 :value="folder.path"
               />
             </el-select>
-            <div v-if="selectedParentFolder !== ''" class="folder-tag-editor">
+            <div class="folder-tag-editor">
               <div class="tag-preview">
                 <el-tag
                   v-for="name in currentFolderTagNames"
@@ -306,7 +306,7 @@
                   @keyup.enter="addFolderTag"
                 >
                   <el-option
-                    v-for="tag in allTags"
+                    v-for="tag in folderTagOptions"
                     :key="tag.tagId"
                     :label="tag.tagName"
                     :value="tag.tagName"
@@ -391,7 +391,8 @@ async function initData() {
       allTags.value = tagRes.data.map(t => ({
         tagId: t.tagId,
         tagName: t.tagName,
-        tagColor: t.tagColor || '#409EFF'
+        tagColor: t.tagColor || '#409EFF',
+        tagScope: t.tagScope || 'A'
       }))
     }
   } catch (e) {
@@ -399,20 +400,28 @@ async function initData() {
   }
 }
 
-/** 将后端目录树格式转换为 VaultFolderPicker 格式 */
-function convertTreeData(nodes) {
-  if (!nodes || !nodes.length) return []
-  return nodes.map(node => ({
+/** 递归转换单个节点（不包装根目录） */
+function convertTreeNode(node) {
+  return {
     name: node.label,
-    path: '/' + node.value,
-    children: convertTreeData(node.children)
-  }))
+    path: node.value,
+    children: (node.children || []).map(convertTreeNode)
+  }
+}
+
+/** 将后端目录树格式转换为 VaultFolderPicker 格式（根目录为 '/'） */
+function convertTreeData(nodes) {
+  const children = (nodes || []).map(convertTreeNode)
+  return [{ name: '根目录', path: '/', children }]
 }
 
 onMounted(initData)
 
 // 目录标签绑定映射（key: 目录路径，value: 标签对象数组）
 const folderTagMap = ref({})
+
+// 编辑弹窗内待提交的文件夹标签绑定（本次新增、尚未写入后端）
+const pendingFolderTagBinds = ref([])
 
 // 表单数据
 const form = reactive({
@@ -442,6 +451,16 @@ const parentFolderOptions = computed(() => {
 const currentFolderTagNames = computed(() => {
   const tags = folderTagMap.value[selectedParentFolder.value] || []
   return tags.map(t => t.tagName)
+})
+
+// 文件标签选择器选项（过滤掉仅目录的标签）
+const fileTagOptions = computed(() => {
+  return allTags.value.filter(t => t.tagScope === 'A' || t.tagScope === 'F')
+})
+
+// 文件夹标签选择器选项（过滤掉仅文件的标签）
+const folderTagOptions = computed(() => {
+  return allTags.value.filter(t => t.tagScope === 'A' || t.tagScope === 'D')
 })
 
 // 状态枚举
@@ -492,7 +511,7 @@ function formatFileSize(size) {
   return (size / (1024 * 1024 * 1024)).toFixed(1) + ' GB'
 }
 
-/** 解析路径为所有层级数组 */
+/** 解析路径为所有层级数组（根目录为 '/'，子目录无前导斜杠） */
 function resolvePathChain(path) {
   if (!path || path === '/') {
     return [{ name: '根目录', path: '/' }]
@@ -502,7 +521,7 @@ function resolvePathChain(path) {
   let current = ''
   const parts = cleanPath.split('/').filter(Boolean)
   for (const part of parts) {
-    current = current + '/' + part
+    current = current ? current + '/' + part : part
     result.push({ name: part, path: current })
   }
   return result.reverse()
@@ -510,11 +529,24 @@ function resolvePathChain(path) {
 
 /** 计算文件的继承标签 */
 function computeInheritedTags(filePath) {
-  if (!filePath) return []
   const inherited = new Map()
-  const cleanPath = filePath.replace(/\/$/, '')
+  const cleanPath = (filePath || '').replace(/\/$/, '')
+  const fileParts = cleanPath.split('/').filter(Boolean)
+
   for (const [folderPath, tags] of Object.entries(folderTagMap.value)) {
-    if (cleanPath === folderPath || cleanPath.startsWith(folderPath + '/')) {
+    const folderPathNormalized = folderPath.replace(/\/$/, '')
+    if (cleanPath === folderPathNormalized) {
+      // 文件就在该文件夹中
+      for (const tag of tags) {
+        inherited.set(tag.tagId, tag)
+      }
+      continue
+    }
+    const folderParts = folderPathNormalized.split('/').filter(Boolean)
+    // 文件夹路径必须是文件路径的前缀，且每个路径段精确匹配
+    const isPrefix = folderParts.length < fileParts.length &&
+      folderParts.every((part, i) => fileParts[i] === part)
+    if (isPrefix) {
       for (const tag of tags) {
         inherited.set(tag.tagId, tag)
       }
@@ -539,12 +571,17 @@ function getTagByName(name) {
 // 标签颜色池
 const colors = ['#409EFF', '#67C23A', '#E6A23C', '#F56C6C', '#909399', '#9254DE', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4']
 
+/** 生成统一格式的 tagId */
+function generateTagId() {
+  return 'tag_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9)
+}
+
 /** 创建新标签（仅前端，后端创建请直接调用 addTag） */
 function createNewTag(name) {
   const existing = getTagByName(name)
   if (existing) return existing
   const newTag = {
-    tagId: 'tag_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+    tagId: generateTagId(),
     tagName: name,
     tagColor: colors[allTags.value.length % colors.length]
   }
@@ -568,7 +605,7 @@ async function addFileTag() {
   let tagObj = getTagByName(trimmed)
   if (!tagObj) {
     // 预生成 tagId，确保后续 bindTag 有正确 ID
-    const newTagId = 'tag_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9)
+    const newTagId = generateTagId()
     try {
       const res = await addTag({
         tagId: newTagId,
@@ -578,9 +615,13 @@ async function addFileTag() {
       if (res.code === 200) {
         tagObj = { tagId: newTagId, tagName: trimmed, tagColor: colors[allTags.value.length % colors.length] }
         allTags.value.push(tagObj)
+      } else {
+        ElMessage.error(`创建标签失败：${res.msg || '未知错误'}`)
+        return
       }
     } catch (e) {
-      tagObj = createNewTag(trimmed)
+      ElMessage.error(`创建标签失败：${e.message || '网络错误'}`)
+      return
     }
   }
 
@@ -614,8 +655,7 @@ async function addFolderTag() {
 
   let tagObj = getTagByName(trimmed)
   if (!tagObj) {
-    // 预生成 tagId，确保后续 bindTag 有正确 ID
-    const newTagId = 'tag_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9)
+    const newTagId = generateTagId()
     try {
       const res = await addTag({
         tagId: newTagId,
@@ -625,24 +665,23 @@ async function addFolderTag() {
       if (res.code === 200) {
         tagObj = { tagId: newTagId, tagName: trimmed, tagColor: colors[allTags.value.length % colors.length] }
         allTags.value.push(tagObj)
+      } else {
+        ElMessage.error(`创建标签失败：${res.msg || '未知错误'}`)
+        return
       }
     } catch (e) {
-      ElMessage.error('创建标签失败')
+      ElMessage.error(`创建标签失败：${e.message || '网络错误'}`)
       return
     }
   }
 
-  // 绑定到后端
-  try {
-    await bindTag({
-      targetType: 'D',
-      targetId: selectedParentFolder.value,
-      tagId: tagObj.tagId
-    })
-  } catch (e) {
-    ElMessage.error('绑定标签失败')
-    return
-  }
+  // 本地记录待提交的文件夹标签绑定（确认时才写入后端）
+  pendingFolderTagBinds.value.push({
+    targetId: selectedParentFolder.value,
+    tagId: tagObj.tagId,
+    tagName: tagObj.tagName,
+    tagColor: tagObj.tagColor
+  })
 
   const currentTags = folderTagMap.value[selectedParentFolder.value] || []
   folderTagMap.value[selectedParentFolder.value] = [...currentTags, tagObj]
@@ -662,8 +701,20 @@ async function removeFolderTag(name) {
     [selectedParentFolder.value]: remaining
   }
 
-  // 同步到后端：精确解绑被删除的标签
-  if (tagToRemove) {
+  if (!tagToRemove) {
+    syncInheritedTags()
+    return
+  }
+
+  // 检查是否是本次编辑新添加的（尚未写入后端）
+  const pendingIdx = pendingFolderTagBinds.value.findIndex(
+    p => p.targetId === selectedParentFolder.value && p.tagId === tagToRemove.tagId
+  )
+  if (pendingIdx !== -1) {
+    // 仅移除本地待提交记录，不调用后端
+    pendingFolderTagBinds.value.splice(pendingIdx, 1)
+  } else {
+    // 数据层已有标签，立即解绑
     try {
       await unbindTagByTargetAndTagId('D', selectedParentFolder.value, tagToRemove.tagId)
     } catch (e) {
@@ -763,6 +814,7 @@ async function handleEdit(row) {
   selectedParentFolder.value = chain.length > 0 ? chain[0].path : ''
   pendingFileTag.value = ''
   pendingFolderTag.value = ''
+  pendingFolderTagBinds.value = []
   open.value = true
 }
 
@@ -835,22 +887,47 @@ async function submitForm() {
     }
   }
 
-  // 先解绑旧标签，避免重复绑定导致唯一键冲突
+  // 提交本次编辑新增的文件夹标签绑定（与文件标签独立，失败仅提示不阻断）
+  for (const bind of pendingFolderTagBinds.value) {
+    try {
+      await bindTag({ targetType: 'D', targetId: bind.targetId, tagId: bind.tagId })
+    } catch (e) {
+      ElMessage.error(`文件夹标签 "${bind.tagName}" 保存失败`)
+    }
+  }
+  pendingFolderTagBinds.value = []
+
+  // 标签同步：先解绑旧标签，再绑定新标签，失败时阻断状态变更
   try {
     await unbindTagByTarget('F', fileId)
   } catch (e) {
-    console.error('解绑旧标签失败', e)
+    ElMessage.error('解绑旧标签失败，请重试')
+    return
   }
 
-  // 保存文件标签
-  if (tagObjects.length > 0) {
+  const boundTagIds = []
+  let bindError = null
+  for (const tag of tagObjects) {
     try {
-      for (const tag of tagObjects) {
-        await bindTag({ targetType: 'F', targetId: fileId, tagId: tag.tagId })
-      }
+      await bindTag({ targetType: 'F', targetId: fileId, tagId: tag.tagId })
+      boundTagIds.push(tag.tagId)
     } catch (e) {
-      console.error('保存文件标签失败', e)
+      bindError = `绑定标签 "${tag.tagName}" 失败`
+      break
     }
+  }
+
+  // 若部分绑定失败，回滚已绑定的标签，并中断流程
+  if (bindError) {
+    for (const tagId of boundTagIds) {
+      try {
+        await unbindTagByTargetAndTagId('F', fileId, tagId)
+      } catch (e) {
+        console.error('回滚标签绑定失败', e)
+      }
+    }
+    ElMessage.error(bindError + '，请重试')
+    return
   }
 
   fileList.value[idx] = {
@@ -890,30 +967,43 @@ async function handleConfirm(row) {
     const res = await uploadVaultFile(formData)
     if (res.code === 200 && res.data) {
       const result = res.data
-      // 更新文件信息
+      const lastSlash = result.vaultPath ? result.vaultPath.lastIndexOf('/') : -1
+      const newSuggestedPath = lastSlash > 0 ? result.vaultPath.substring(0, lastSlash) : '/'
+
+      // 保存文件标签（在上传成功后、状态变更前执行）
+      if (row.tags && row.tags.length > 0) {
+        for (const tag of row.tags) {
+          try {
+            await bindTag({ targetType: 'F', targetId: result.fileId, tagId: tag.tagId })
+          } catch (e) {
+            ElMessage.error(`标签 "${tag.tagName}" 绑定失败，文件未最终确认`)
+            // 更新文件ID和路径，但保持原状态，方便用户重试
+            fileList.value[idx] = {
+              ...fileList.value[idx],
+              fileId: result.fileId,
+              originalName: result.fileName,
+              suggestedName: result.fileName,
+              vaultPath: result.vaultPath,
+              suggestedPath: newSuggestedPath,
+              _raw: null
+            }
+            return
+          }
+        }
+      }
+
+      // 所有标签绑定成功后，才更新为 confirmed
       fileList.value[idx] = {
         ...fileList.value[idx],
         fileId: result.fileId,
         originalName: result.fileName,
         suggestedName: result.fileName,
         vaultPath: result.vaultPath,
+        suggestedPath: newSuggestedPath,
         status: 'confirmed',
-        _raw: null
+        _raw: null,
+        inheritedTags: computeInheritedTags(newSuggestedPath)
       }
-
-      // 从 vaultPath 推导 suggestedPath
-      const vaultDir = result.vaultPath ? ('/' + result.vaultPath.replace(/\/[^\/]*$/, '')) : '/'
-      fileList.value[idx].suggestedPath = vaultDir === '/' ? '/' : vaultDir
-
-      // 保存文件标签
-      if (row.tags && row.tags.length > 0) {
-        for (const tag of row.tags) {
-          await bindTag({ targetType: 'F', targetId: result.fileId, tagId: tag.tagId })
-        }
-      }
-
-      // 计算继承标签
-      fileList.value[idx].inheritedTags = computeInheritedTags(fileList.value[idx].suggestedPath)
 
       ElMessage.success('文件已保存到 Vault')
     } else {
@@ -975,15 +1065,38 @@ async function handleBatchConfirm() {
           status: 'confirmed',
           _raw: null
         }
-        // 从 vaultPath 推导 suggestedPath
-        const vaultDir = result.vaultPath ? ('/' + result.vaultPath.replace(/\/[^\/]*$/, '')) : '/'
-        fileList.value[idx].suggestedPath = vaultDir === '/' ? '/' : vaultDir
+        // 从 vaultPath 推导 suggestedPath（去掉文件名，根目录为 '/'）
+        const lastSlash = result.vaultPath ? result.vaultPath.lastIndexOf('/') : -1
+        const vaultDir = lastSlash > 0 ? result.vaultPath.substring(0, lastSlash) : '/'
+        fileList.value[idx].suggestedPath = vaultDir
 
         // 保存文件标签
+        let tagBindFailed = false
         if (row.tags && row.tags.length > 0) {
           for (const tag of row.tags) {
-            await bindTag({ targetType: 'F', targetId: result.fileId, tagId: tag.tagId })
+            try {
+              await bindTag({ targetType: 'F', targetId: result.fileId, tagId: tag.tagId })
+            } catch (e) {
+              tagBindFailed = true
+              ElMessage.error(`文件 "${row.originalName}" 的标签 "${tag.tagName}" 绑定失败`)
+              break
+            }
           }
+        }
+
+        if (tagBindFailed) {
+          // 标签绑定失败：文件已上传，但状态不置为 confirmed
+          fileList.value[idx] = {
+            ...fileList.value[idx],
+            fileId: result.fileId,
+            originalName: result.fileName,
+            suggestedName: result.fileName,
+            vaultPath: result.vaultPath,
+            suggestedPath: vaultDir,
+            _raw: null
+          }
+          failCount++
+          continue
         }
 
         // 计算继承标签

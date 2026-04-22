@@ -18,20 +18,43 @@
       style="width: 100%"
     >
       <el-table-column type="selection" width="40" />
-      <el-table-column prop="fileName" label="名称" min-width="140" show-overflow-tooltip>
+      <el-table-column prop="fileName" label="名称" min-width="120" show-overflow-tooltip>
         <template #default="{ row }">
           <el-icon><Document /></el-icon>
           <span style="margin-left: 4px">{{ row.fileName }}</span>
         </template>
       </el-table-column>
-      <el-table-column prop="fileType" label="类型" width="70" />
-      <el-table-column prop="fileSize" label="大小" width="80">
+      <el-table-column prop="fileType" label="类型" width="60" />
+      <el-table-column prop="fileSize" label="大小" width="70">
         <template #default="{ row }">
           {{ formatSize(row.fileSize) }}
         </template>
       </el-table-column>
-      <el-table-column prop="updateTime" label="修改日期" width="150" />
-      <el-table-column label="操作" width="140" fixed="right">
+      <el-table-column label="标签" min-width="120">
+        <template #default="{ row }">
+          <div class="tag-cell">
+            <el-tag
+              v-for="tag in row.tags"
+              :key="tag.tagId"
+              size="small"
+              :color="tag.tagColor"
+              effect="dark"
+              class="direct-tag"
+            >{{ tag.tagName }}</el-tag>
+            <el-tag
+              v-for="tag in row.inheritedTags"
+              :key="'inherited_' + tag.tagId"
+              size="small"
+              :color="tag.tagColor"
+              effect="plain"
+              class="inherited-tag"
+            >{{ tag.tagName }}</el-tag>
+            <span v-if="!row.tags?.length && !row.inheritedTags?.length" class="no-tag">--</span>
+          </div>
+        </template>
+      </el-table-column>
+      <el-table-column prop="updateTime" label="修改日期" width="140" />
+      <el-table-column label="操作" width="130" fixed="right">
         <template #default="{ row }">
           <el-button link type="primary" icon="Download" @click.stop="emit('download', row)" />
           <el-button link type="primary" icon="Edit" @click.stop="emit('rename', row)" />
@@ -52,6 +75,20 @@
         <el-icon :size="40"><Document /></el-icon>
         <div class="icon-name" :title="file.fileName">{{ file.fileName }}</div>
         <div class="icon-size">{{ formatSize(file.fileSize) }}</div>
+        <div v-if="file.tags?.length || file.inheritedTags?.length" class="icon-tags">
+          <el-tag
+            v-for="tag in (file.tags || []).slice(0, 2)"
+            :key="tag.tagId"
+            size="small"
+            :color="tag.tagColor"
+            effect="dark"
+          >{{ tag.tagName }}</el-tag>
+          <el-tag
+            v-if="file.inheritedTags?.length"
+            size="small"
+            type="info"
+          >+{{ file.inheritedTags.length }}</el-tag>
+        </div>
       </div>
     </div>
 
@@ -103,13 +140,31 @@ function formatSize(size) {
 
 <style scoped>
 .list-card {
-  height: 100%;
+  flex: 1;
+  min-height: 0;
 }
 .list-card :deep(.el-card__body) {
   height: calc(100% - 40px);
   overflow: auto;
   display: flex;
   flex-direction: column;
+}
+.tag-cell {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+.direct-tag {
+  border: none;
+  color: #fff;
+}
+.inherited-tag {
+  opacity: 0.75;
+}
+.no-tag {
+  color: #c0c4cc;
+  font-size: 12px;
 }
 .icon-view {
   display: flex;
@@ -140,5 +195,12 @@ function formatSize(size) {
   margin-top: 4px;
   font-size: 11px;
   color: #909399;
+}
+.icon-tags {
+  margin-top: 6px;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 2px;
 }
 </style>
