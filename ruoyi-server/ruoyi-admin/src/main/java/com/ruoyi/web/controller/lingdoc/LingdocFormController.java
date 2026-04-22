@@ -25,11 +25,14 @@ import com.ruoyi.common.core.page.TableDataInfo;
 import com.ruoyi.common.enums.BusinessType;
 import com.ruoyi.common.utils.StringUtils;
 import com.ruoyi.common.utils.file.FileUploadUtils;
+import com.ruoyi.common.constant.Constants;
 import com.ruoyi.common.utils.file.FileUtils;
 import com.ruoyi.common.utils.uuid.UUID;
+import com.ruoyi.system.domain.lingdoc.LingdocFileIndex;
 import com.ruoyi.system.domain.lingdoc.LingdocFormField;
 import com.ruoyi.system.domain.lingdoc.LingdocFormReference;
 import com.ruoyi.system.domain.lingdoc.LingdocFormTask;
+import com.ruoyi.system.mapper.lingdoc.LingdocFileIndexMapper;
 import com.ruoyi.system.service.lingdoc.ILingdocFormTaskService;
 
 /**
@@ -45,6 +48,9 @@ public class LingdocFormController extends BaseController
 
     @Autowired
     private ILingdocFormTaskService formTaskService;
+
+    @Autowired
+    private LingdocFileIndexMapper lingdocFileIndexMapper;
 
     /**
      * 查询表格填写任务列表
@@ -95,9 +101,9 @@ public class LingdocFormController extends BaseController
                 return AjaxResult.error("文件名不能为空");
             }
             String ext = originalFilename.substring(originalFilename.lastIndexOf(".") + 1).toLowerCase();
-            if (!("pdf".equals(ext) || "docx".equals(ext) || "xlsx".equals(ext) || "doc".equals(ext) || "xls".equals(ext)))
+            if (!("pdf".equals(ext) || "docx".equals(ext) || "xlsx".equals(ext) || "doc".equals(ext) || "xls".equals(ext) || "html".equals(ext) || "htm".equals(ext)))
             {
-                return AjaxResult.error("不支持的文件格式，请上传 PDF、Word 或 Excel 文件");
+                return AjaxResult.error("不支持的文件格式，请上传 PDF、Word、Excel 或 HTML 文件");
             }
 
             // 保存文件
@@ -120,14 +126,17 @@ public class LingdocFormController extends BaseController
             task.setCreateBy(getUsername());
             formTaskService.insertLingdocFormTask(task);
 
-            // TODO: 异步调用 AI 识别接口
-            // 这里先返回任务信息，AI 识别完成后通过 WebSocket 或轮询通知前端
+            // 调用 AI 字段识别（当前为 Mock 实现，另一位开发者替换真实 AI）
+            formTaskService.extractFields(task.getTaskId());
 
-            AjaxResult ajax = AjaxResult.success("上传成功，正在识别表格字段...");
-            ajax.put("taskId", task.getTaskId());
-            ajax.put("taskName", task.getTaskName());
+            // 重新查询任务获取最新状态
+            LingdocFormTask updatedTask = formTaskService.selectLingdocFormTaskById(task.getTaskId());
+
+            AjaxResult ajax = AjaxResult.success("上传成功，表格字段识别完成");
+            ajax.put("taskId", updatedTask.getTaskId());
+            ajax.put("taskName", updatedTask.getTaskName());
             ajax.put("originalFileName", originalFilename);
-            ajax.put("status", task.getStatus());
+            ajax.put("status", updatedTask.getStatus());
             return ajax;
         }
         catch (Exception e)
@@ -175,18 +184,16 @@ public class LingdocFormController extends BaseController
             return AjaxResult.error("任务不存在");
         }
 
-        // TODO: 调用 AI 生成接口
-        // 1. 获取所有已确认的字段
-        // 2. 调用 AI 服务生成填写后的文档
-        // 3. 保存生成的文档到文件系统
-        // 4. 更新任务状态为"已生成"
+        // 调用文档生成（当前为 Mock 实现，另一位开发者替换真实 AI）
+        formTaskService.generateDocument(taskId);
 
-        // Mock 实现：直接更新状态为已生成
-        task.setStatus("3");
-        task.setFilledFileName(task.getOriginalFileName().replaceAll("\\.(?=[^\\.]+$)", "_已填写."));
-        formTaskService.updateLingdocFormTask(task);
+        // 重新查询任务获取最新状态
+        LingdocFormTask updatedTask = formTaskService.selectLingdocFormTaskById(taskId);
 
-        return AjaxResult.success("文档生成成功").put("taskId", taskId).put("status", "3");
+        return AjaxResult.success("文档生成成功")
+                .put("taskId", taskId)
+                .put("filledFileUrl", updatedTask.getFilledFileUrl())
+                .put("status", updatedTask.getStatus());
     }
 
     /**
@@ -201,6 +208,42 @@ public class LingdocFormController extends BaseController
     }
 
     /**
+     * 保存填写后文档到 Vault
+     */
+    @PreAuthorize("@ss.hasPermi('lingdoc:form:edit')")
+    @Log(title = "表格填写助手", businessType = BusinessType.INSERT)
+    @PostMapping("/saveToVault")
+    public AjaxResult saveToVault(@RequestBody LingdocFormTask taskParam)
+    {
+        String taskId = taskParam.getTaskId();
+        LingdocFormTask task = formTaskService.selectLingdocFormTaskById(taskId);
+        if (task == null)
+        {
+            return AjaxResult.error("任务不存在");
+        }
+        if (StringUtils.isEmpty(task.getFilledFileUrl()))
+        {
+            return AjaxResult.error("尚未生成填写后文档，无法保存");
+        }
+
+        try
+        {
+            LingdocFileIndex fileIndex = formTaskService.saveToVault(task, getUserId());
+
+            return AjaxResult.success("已保存到 Vault")
+                    .put("taskId", taskId)
+                    .put("vaultFileId", fileIndex.getFileId())
+                    .put("vaultFileName", fileIndex.getFileName())
+                    .put("vaultPath", fileIndex.getVaultPath());
+        }
+        catch (Exception e)
+        {
+            log.error("保存到 Vault 失败", e);
+            return AjaxResult.error("保存失败：" + e.getMessage());
+        }
+    }
+
+    /**
      * 下载填写后文档
      */
     @PreAuthorize("@ss.hasPermi('lingdoc:form:download')")
@@ -210,15 +253,41 @@ public class LingdocFormController extends BaseController
         try
         {
             LingdocFormTask task = formTaskService.selectLingdocFormTaskById(taskId);
-            if (task == null || StringUtils.isEmpty(task.getFilledFileUrl()))
+            if (task == null)
+            {
+                response.sendError(404, "任务不存在");
+                return;
+            }
+
+            String filePath = null;
+            String downloadName = null;
+
+            // 优先级 1：Vault 归档文件
+            if (StringUtils.isNotEmpty(task.getFilledFileId()))
+            {
+                LingdocFileIndex fileIndex = lingdocFileIndexMapper.selectLingdocFileIndexById(task.getFilledFileId());
+                if (fileIndex != null)
+                {
+                    filePath = fileIndex.getAbsPath();
+                    downloadName = fileIndex.getFileName();
+                }
+            }
+
+            // 优先级 2：临时生成文件
+            if (filePath == null && StringUtils.isNotEmpty(task.getFilledFileUrl()))
+            {
+                filePath = task.getFilledFileUrl().replace(Constants.RESOURCE_PREFIX, RuoYiConfig.getProfile());
+                downloadName = StringUtils.isNotEmpty(task.getFilledFileName())
+                        ? task.getFilledFileName()
+                        : task.getOriginalFileName();
+            }
+
+            if (filePath == null)
             {
                 response.sendError(404, "文件不存在");
                 return;
             }
-            String filePath = RuoYiConfig.getUploadPath() + task.getFilledFileUrl();
-            String downloadName = StringUtils.isNotEmpty(task.getFilledFileName()) 
-                ? task.getFilledFileName() 
-                : task.getOriginalFileName();
+
             response.setContentType("application/octet-stream");
             FileUtils.setAttachmentResponseHeader(response, downloadName);
             FileUtils.writeBytes(filePath, response.getOutputStream());

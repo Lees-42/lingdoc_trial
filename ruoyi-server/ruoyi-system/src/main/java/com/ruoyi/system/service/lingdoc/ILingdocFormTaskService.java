@@ -1,6 +1,7 @@
 package com.ruoyi.system.service.lingdoc;
 
 import java.util.List;
+import com.ruoyi.system.domain.lingdoc.LingdocFileIndex;
 import com.ruoyi.system.domain.lingdoc.LingdocFormField;
 import com.ruoyi.system.domain.lingdoc.LingdocFormReference;
 import com.ruoyi.system.domain.lingdoc.LingdocFormTask;
@@ -83,4 +84,28 @@ public interface ILingdocFormTaskService
      * @return 参考文档列表
      */
     public List<LingdocFormReference> selectFormReferencesByTaskId(String taskId);
+
+    /**
+     * 字段识别：调用 AI 提取表格字段（AI 部分由另一位开发者实现）
+     * 
+     * @param taskId 任务ID
+     */
+    public void extractFields(String taskId);
+
+    /**
+     * 文档生成：调用 AI 生成填写后的文档（AI 部分由另一位开发者实现）
+     * 
+     * @param taskId 任务ID
+     * @return 生成的文件绝对路径
+     */
+    public String generateDocument(String taskId);
+
+    /**
+     * 保存填写后的文档到 Vault
+     * 
+     * @param task 任务对象
+     * @param userId 当前用户ID
+     * @return 创建的 Vault 文件索引对象
+     */
+    public LingdocFileIndex saveToVault(LingdocFormTask task, Long userId);
 }

@@ -90,6 +90,17 @@ export function downloadForm(taskId) {
   })
 }
 
+// ==================== Vault 保存 ====================
+
+// 保存到 Vault
+export function saveToVault(data) {
+  return request({
+    url: '/lingdoc/form/saveToVault',
+    method: 'post',
+    data: data
+  })
+}
+
 // ==================== 参考文档 ====================
 
 // 获取参考文档列表
