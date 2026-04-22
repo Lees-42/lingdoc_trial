@@ -10,6 +10,13 @@
       <app-main />
       <settings ref="settingRef" />
     </div>
+    <!-- 全局仓库配置引导 -->
+    <VaultRepoManager
+      v-model="repoDialogVisible"
+      :repo-list="vaultStore.repoList"
+      :force-create="needForceCreate"
+      @success="handleRepoConfigured"
+    />
   </div>
 </template>
 
@@ -19,6 +26,8 @@ import Sidebar from './components/Sidebar/index.vue'
 import { AppMain, Navbar, Settings, TagsView } from './components'
 import useAppStore from '@/store/modules/app'
 import useSettingsStore from '@/store/modules/settings'
+import useVaultStore from '@/store/modules/vault'
+import VaultRepoManager from '@/views/lingdoc/vault/components/VaultRepoManager.vue'
 
 const settingsStore = useSettingsStore()
 const theme = computed(() => settingsStore.theme)
@@ -55,6 +64,32 @@ watchEffect(() => {
 function handleClickOutside() {
   useAppStore().closeSideBar({ withoutAnimation: false })
 }
+
+const vaultStore = useVaultStore()
+const repoDialogVisible = ref(false)
+const needForceCreate = ref(false)
+
+async function checkRepos() {
+  try {
+    await vaultStore.loadRepos()
+    if (vaultStore.repoList.length === 0) {
+      needForceCreate.value = true
+      repoDialogVisible.value = true
+    }
+  } catch (e) {
+    console.error('加载仓库列表失败', e)
+  }
+}
+
+function handleRepoConfigured() {
+  repoDialogVisible.value = false
+  needForceCreate.value = false
+  vaultStore.loadRepos()
+}
+
+onMounted(() => {
+  checkRepos()
+})
 
 const settingRef = ref(null)
 function setLayout() {

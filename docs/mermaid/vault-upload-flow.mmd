@@ -1,0 +1,94 @@
+```mermaid
+flowchart TD
+    %% ==================== 样式定义 ====================
+    classDef frontend fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    classDef backend fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
+    classDef infra fill:#fff3e0,stroke:#ef6c00,stroke-width:2px
+    classDef storage fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px
+    classDef decision fill:#fff8e1,stroke:#f57f17,stroke-width:2px,shape:diamond
+    classDef error fill:#ffebee,stroke:#c62828,stroke-width:2px
+    classDef success fill:#e8f5e9,stroke:#1b5e20,stroke-width:2px
+
+    %% ==================== 前端流程 ====================
+    A[用户点击<br/>'上传文件'按钮]:::frontend --> B[弹出 el-upload 弹窗<br/>选择文件 + 目标子目录]:::frontend
+    B --> C[request.js 拦截器<br/>自动注入 X-Vault-Path Header]:::frontend
+    C --> D[发送 POST /lingdoc/vault/upload<br/>multipart/form-data<br/>携带 file + subPath]:::frontend
+
+    %% ==================== 后端基础设施（Vault 上下文 + 数据源路由）====================
+    D --> E{Spring Security<br/>JWT 鉴权通过?}:::infra
+    E -->|否| E1[返回 401 未授权]:::error
+    E -->|是| F[VaultContextInterceptor<br/>从 Header 提取 X-Vault-Path]:::infra
+    F --> G[VaultContextHolder<br/>ThreadLocal 存储当前 Vault 路径]:::infra
+    G --> H[VaultDataSourceAspect<br/>AOP 拦截 @VaultDataSource]:::infra
+    H --> I[VaultDataSourceManager<br/>获取对应 SQLite DataSource]:::infra
+    I --> J["DynamicDataSource<br/>切换数据源到<br/>{vault_root}/.lingdoc/vault.db"]:::infra
+
+    %% ==================== Controller + Service 入口 ====================
+    J --> K[LingdocVaultController.upload<br/>接收 file + subPath + userId]:::backend
+    K --> L[LingdocVaultServiceImpl.uploadFile<br/>开始业务处理]:::backend
+
+    %% ==================== Service 层业务逻辑 ====================
+    L --> M{文件为空?}:::decision
+    M -->|是| M1[抛出异常: 上传文件不能为空]:::error
+    M -->|否| N[获取用户默认仓库路径<br/>userRepoService.getUserRepoPath]:::backend
+
+    N --> O["构建目标目录<br/>{vaultRoot}/documents/{subPath}/"]:::backend
+    O --> P{目录存在?}:::decision
+    P -->|否| P1[Files.createDirectories<br/>递归创建目录]:::storage
+    P -->|是| Q["清理文件名非法字符<br/>替换为下划线"]:::backend
+    P1 --> Q
+
+    Q --> R{目标文件<br/>已存在?}:::decision
+    R -->|是| R1[自动重命名<br/>filename_1.ext<br/>filename_2.ext ...]:::backend
+    R -->|否| S[保存物理文件到磁盘<br/>file.transferTo(targetPath)]:::storage
+    R1 --> S
+
+    S --> T[计算 SHA256 checksum<br/>calcFileSha256]:::backend
+    T --> U[查重: 同用户下<br/>checksum 是否已存在?]:::decision
+    U -->|是| U1[删除刚保存的物理文件]:::storage
+    U1 --> U2[抛出异常: 文件已存在<br/>(checksum重复)]:::error
+    U -->|否| V{是文本文件?<br/>txt/md/csv/json/xml/yaml}:::decision
+
+    V -->|是| V1[自动读取文本内容<br/>写入 file_content 字段]:::backend
+    V -->|否| W[构建 LingdocFileIndex 对象<br/>生成 UUID / 填充元数据]:::backend
+    V1 --> W
+
+    W --> X[INSERT INTO<br/>lingdoc_file_index<br/>(SQLite)]:::storage
+    X --> Y[返回 fileIndex 对象]:::backend
+    Y --> Z[Controller 包装<br/>AjaxResult.success]:::backend
+
+    %% ==================== 前端后续 ====================
+    Z --> AA[前端接收响应<br/>上传成功]:::frontend
+    AA --> AB[自动刷新文件列表<br/>新文件出现在 VaultFileList]:::frontend
+    AB --> AC{上传时<br/>绑定了标签?}:::decision
+    AC -->|是| AC1[同步更新标签显示<br/>folderTagMap / fileTags]:::frontend
+    AC -->|否| AD[上传流程结束]:::success
+    AC1 --> AD
+
+    %% ==================== 错误处理聚合 ====================
+    E1 -.-> AE[前端显示错误提示<br/>ElMessage.error]:::error
+    M1 -.-> AE
+    U2 -.-> AE
+    AE --> AF[上传失败]:::error
+
+    %% ==================== 子图分组 ====================
+    subgraph Frontend [前端 Vue3]
+        direction LR
+        A --> B --> C --> D
+    end
+
+    subgraph BackendInfra [后端基础设施 - 动态数据源路由]
+        direction LR
+        E --> F --> G --> H --> I --> J
+    end
+
+    subgraph ServiceLogic [Service 层 - 文件处理与持久化]
+        direction LR
+        L --> M --> N --> O --> P --> Q --> R --> S --> T --> U --> V --> W --> X --> Y
+    end
+
+    subgraph FrontendAfter [前端后续处理]
+        direction LR
+        AA --> AB --> AC --> AD
+    end
+```

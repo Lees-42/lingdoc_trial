@@ -1,0 +1,95 @@
+```mermaid
+flowchart TD
+    %% ==================== 样式定义 ====================
+    classDef create fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
+    classDef bind fill:#e3f2fd,stroke:#1565c0,stroke-width:2px
+    classDef inherit fill:#fff3e0,stroke:#ef6c00,stroke-width:2px
+    classDef unbind fill:#ffebee,stroke:#c62828,stroke-width:2px
+    classDef use fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px
+    classDef startend fill:#eceff1,stroke:#455a64,stroke-width:3px
+    classDef note fill:#fffde7,stroke:#f9a825,stroke-width:1px,stroke-dasharray: 5 5
+
+    %% ==================== 开始 ====================
+    Start((开始)):::startend --> CreateTag[创建标签]:::create
+
+    %% ==================== 阶段一：创建标签 ====================
+    subgraph SG1 [🟢 第一步：制作彩色便利贴]
+        direction LR
+        CreateTag --> TagName[输入标签名称<br/>例如：奖学金]:::create
+        TagName --> TagColor[选择标签颜色<br/>例如：红色]:::create
+        TagColor --> TagScope[设置适用范围<br/>文件可用 或 文件夹可用 或 都可用]:::create
+        TagScope --> TagDone((标签创建完成)):::create
+    end
+
+    %% ==================== 阶段二：绑定标签 ====================
+    TagDone --> BindAction[选择要贴标签的目标]:::bind
+
+    subgraph SG2 [🔵 第二步：贴便利贴]
+        direction LR
+        BindAction --> BindType{贴到哪里?}:::bind
+        BindType -->|文件夹| BindFolder[给文件夹贴标签<br/>例如：给 学习资料/奖学金 文件夹<br/>贴上红色 奖学金 标签]:::bind
+        BindType -->|单个文件| BindFile[给文件贴标签<br/>例如：给 申请表.docx<br/>贴上 奖学金 标签]:::bind
+    end
+
+    %% ==================== 阶段三：继承传播（核心亮点）====================
+    BindFolder --> InheritAction
+
+    subgraph SG3 [🟠 第三步：继承传播（核心机制）]
+        direction TB
+        InheritAction[文件夹贴上标签后<br/>里面的内容自动沾光]:::inherit
+
+        InheritAction --> InheritFile1[文件A自动显示<br/>奖学金 标签<br/>（灰色虚线样式）]:::inherit
+        InheritAction --> InheritFile2[文件B自动显示<br/>奖学金 标签<br/>（灰色虚线样式）]:::inherit
+        InheritAction --> InheritSub[子文件夹自动显示<br/>奖学金 标签<br/>并继续传给它的子内容]:::inherit
+
+        InheritSub --> InheritFile3[子文件夹内的文件C<br/>也自动显示 奖学金 标签]:::inherit
+
+        NoteInherit[💡 原理说明<br/>就像给文件夹贴上便利贴<br/>里面的文件不用一张一张贴<br/>自动就能被分类找到]:::note
+    end
+
+    %% ==================== 阶段四：标签叠加显示 ====================
+    BindFile --> FileDisplay
+    InheritFile1 --> FileDisplay
+    InheritFile2 --> FileDisplay
+    InheritFile3 --> FileDisplay
+
+    subgraph SG4 [标签叠加效果]
+        direction TB
+        FileDisplay[一个文件可以<br/>同时显示多种标签]:::use
+        FileDisplay --> DisplayDirect[(直接贴的标签<br/>实线彩色显示<br/>例如：紧急)]:::bind
+        FileDisplay --> DisplayInherit[(继承来的标签<br/>虚线灰色显示<br/>例如：奖学金)]:::inherit
+        FileDisplay --> DisplayCombo[(叠加显示<br/>紧急 + 奖学金<br/>一目了然)]:::use
+    end
+
+    %% ==================== 阶段五：解绑与删除 ====================
+    DisplayCombo --> ManageAction[管理标签]:::unbind
+
+    subgraph SG5 [🔴 第四步：撕掉便利贴]
+        direction LR
+        ManageAction --> ManageType{要做什么?}:::unbind
+
+        ManageType -->|撕掉单个标签| UnbindDirect[撕掉直接贴的标签<br/>（可以单独撕）]:::unbind
+        ManageType -->|撕掉继承标签| UnbindInherit[撕掉继承来的标签<br/>❌ 不能直接撕<br/>必须去父目录上撕掉]:::unbind
+        ManageType -->|扔掉整类标签| DeleteTag[删除 奖学金 标签定义<br/>系统自动撕掉<br/>所有文件上的 奖学金 标签]:::unbind
+    end
+
+    %% ==================== 阶段六：使用场景 ====================
+    UnbindDirect --> UseTag
+    UnbindInherit --> UseTag
+    DeleteTag --> UseTag
+
+    subgraph SG6 [🟣 第五步：使用标签]
+        direction TB
+        UseTag[标签的使用场景]:::use
+        UseTag --> UseSearch[按标签搜索<br/>只看 奖学金 相关文件]:::use
+        UseTag --> UseFilter[按标签筛选<br/>在文件列表中过滤]:::use
+        UseTag --> UseUpload[上传文件时贴标签<br/>归档时自动分类]:::use
+        UseTag --> UseForm[表格填写助手<br/>按标签找参考材料]:::use
+    end
+
+    %% ==================== 结束 ====================
+    UseTag --> End((结束)):::startend
+
+    %% ==================== 关键区别说明 ====================
+    NoteKey[📌 标签 vs 文件夹 的核心区别<br/>文件夹决定文件放在哪里（物理位置）<br/>标签是独立分类维度（同一个文件可以有多个标签）]:::note
+```

@@ -77,7 +77,6 @@
     <VaultRepoManager
       v-model="state.repoDialogVisible"
       :repo-list="vaultStore.repoList"
-      :force-create="state.needForceCreate"
       @success="handleRepoChanged"
     />
 
@@ -185,7 +184,6 @@ const state = reactive({
   previewDialogVisible: false,
   repoInfo: {},
   repoDialogVisible: false,
-  needForceCreate: false,
   repoInitializing: false,
   duplicateDialogVisible: false,
   duplicateFiles: [],
@@ -519,11 +517,6 @@ async function loadRepos() {
   try {
     await vaultStore.loadRepos()
     state.repoInfo = vaultStore.currentRepo || {}
-    // 如果没有仓库，强制显示创建弹窗
-    if (vaultStore.repoList.length === 0) {
-      state.needForceCreate = true
-      state.repoDialogVisible = true
-    }
   } catch (e) {
     ElMessage.error('获取仓库配置失败')
   } finally {
