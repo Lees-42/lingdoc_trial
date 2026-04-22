@@ -101,4 +101,14 @@ public interface ILingdocTagService
      * @return 结果
      */
     public int deleteLingdocTagBindingByTarget(String targetType, String targetId);
+
+    /**
+     * 根据目标和标签ID解绑特定标签
+     * 
+     * @param targetType 目标类型
+     * @param targetId 目标标识
+     * @param tagId 标签ID
+     * @return 结果
+     */
+    public int deleteLingdocTagBindingByTargetAndTagId(String targetType, String targetId, String tagId);
 }

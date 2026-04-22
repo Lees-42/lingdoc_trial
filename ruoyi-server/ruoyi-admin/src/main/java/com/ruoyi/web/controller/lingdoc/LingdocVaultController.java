@@ -50,22 +50,39 @@ public class LingdocVaultController extends BaseController
     @Autowired
     private ILingdocUserRepoService userRepoService;
 
+    // ==================== 仓库管理 API ====================
+
     /**
-     * 获取当前用户仓库配置
+     * 获取当前用户所有仓库列表
+     */
+    @PreAuthorize("@ss.hasPermi('lingdoc:vault:list')")
+    @GetMapping("/repos")
+    public AjaxResult listRepos()
+    {
+        List<LingdocUserRepo> repos = userRepoService.listUserRepos(getUserId());
+        return AjaxResult.success(repos);
+    }
+
+    /**
+     * 获取当前用户默认仓库配置
      */
     @PreAuthorize("@ss.hasPermi('lingdoc:vault:list')")
     @GetMapping("/repo")
     public AjaxResult getRepo()
     {
-        LingdocUserRepo repo = userRepoService.getOrInitUserRepo(getUserId());
+        LingdocUserRepo repo = userRepoService.getDefaultUserRepo(getUserId());
+        if (repo == null)
+        {
+            return AjaxResult.error(400, "请先创建仓库");
+        }
         return AjaxResult.success(repo);
     }
 
     /**
-     * 创建/切换到新仓库
+     * 创建新仓库
      */
     @PreAuthorize("@ss.hasPermi('lingdoc:vault:edit')")
-    @Log(title = "仓库管理", businessType = BusinessType.UPDATE)
+    @Log(title = "仓库管理", businessType = BusinessType.INSERT)
     @PostMapping("/repo")
     public AjaxResult createRepo(@RequestBody Map<String, String> body)
     {
@@ -80,12 +97,50 @@ public class LingdocVaultController extends BaseController
     }
 
     /**
+     * 删除仓库
+     */
+    @PreAuthorize("@ss.hasPermi('lingdoc:vault:edit')")
+    @Log(title = "仓库管理", businessType = BusinessType.DELETE)
+    @DeleteMapping("/repo/{repoId}")
+    public AjaxResult deleteRepo(@PathVariable("repoId") String repoId)
+    {
+        try
+        {
+            userRepoService.deleteRepo(getUserId(), repoId);
+            return AjaxResult.success("删除成功");
+        }
+        catch (RuntimeException e)
+        {
+            return AjaxResult.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 设置默认仓库
+     */
+    @PreAuthorize("@ss.hasPermi('lingdoc:vault:edit')")
+    @Log(title = "仓库管理", businessType = BusinessType.UPDATE)
+    @PutMapping("/repo/{repoId}/default")
+    public AjaxResult setDefaultRepo(@PathVariable("repoId") String repoId)
+    {
+        try
+        {
+            LingdocUserRepo repo = userRepoService.setDefaultRepo(getUserId(), repoId);
+            return AjaxResult.success(repo);
+        }
+        catch (RuntimeException e)
+        {
+            return AjaxResult.error(e.getMessage());
+        }
+    }
+
+    /**
      * 迁移仓库到新路径
      */
     @PreAuthorize("@ss.hasPermi('lingdoc:vault:edit')")
     @Log(title = "仓库管理", businessType = BusinessType.UPDATE)
-    @PutMapping("/repo/migrate")
-    public AjaxResult migrateRepo(@RequestBody Map<String, String> body)
+    @PutMapping("/repo/{repoId}/migrate")
+    public AjaxResult migrateRepo(@PathVariable("repoId") String repoId, @RequestBody Map<String, String> body)
     {
         String newRepoPath = body.get("newRepoPath");
         if (StringUtils.isEmpty(newRepoPath))
@@ -94,7 +149,7 @@ public class LingdocVaultController extends BaseController
         }
         try
         {
-            userRepoService.migrateRepo(getUserId(), newRepoPath);
+            userRepoService.migrateRepo(getUserId(), repoId, newRepoPath);
             return AjaxResult.success("仓库迁移成功");
         }
         catch (IOException e)
@@ -108,6 +163,8 @@ public class LingdocVaultController extends BaseController
             return AjaxResult.error(e.getMessage());
         }
     }
+
+    // ==================== 文件管理 API ====================
 
     /**
      * 上传文件到Vault

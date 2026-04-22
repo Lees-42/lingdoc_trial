@@ -123,6 +123,17 @@ public class LingdocTagController extends BaseController
         {
             return AjaxResult.error("目标ID和标签ID不能为空");
         }
+        // 幂等检查：若已存在相同绑定，直接返回成功
+        LingdocTagBinding query = new LingdocTagBinding();
+        query.setTargetType(binding.getTargetType());
+        query.setTargetId(binding.getTargetId());
+        query.setTagId(binding.getTagId());
+        query.setBindType(binding.getBindType());
+        List<LingdocTagBinding> existing = tagService.selectLingdocTagBindingList(query);
+        if (existing != null && !existing.isEmpty())
+        {
+            return AjaxResult.success("标签已绑定");
+        }
         return toAjax(tagService.insertLingdocTagBinding(binding));
     }
 
@@ -158,5 +169,18 @@ public class LingdocTagController extends BaseController
                                      @RequestParam("targetId") String targetId)
     {
         return toAjax(tagService.deleteLingdocTagBindingByTarget(targetType, targetId));
+    }
+
+    /**
+     * 按目标和标签ID解绑特定标签
+     */
+    @PreAuthorize("@ss.hasPermi('lingdoc:tag:edit')")
+    @Log(title = "标签管理", businessType = BusinessType.DELETE)
+    @DeleteMapping("/bind/target-tag")
+    public AjaxResult unbindByTargetAndTagId(@RequestParam("targetType") String targetType,
+                                               @RequestParam("targetId") String targetId,
+                                               @RequestParam("tagId") String tagId)
+    {
+        return toAjax(tagService.deleteLingdocTagBindingByTargetAndTagId(targetType, targetId, tagId));
     }
 }

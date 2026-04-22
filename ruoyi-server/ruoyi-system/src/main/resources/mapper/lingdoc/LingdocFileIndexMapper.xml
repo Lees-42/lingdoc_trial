@@ -44,7 +44,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="checksum != null and checksum != ''"> and checksum = #{checksum}</if>
             <if test="isDesensitized != null and isDesensitized != ''"> and is_desensitized = #{isDesensitized}</if>
             <if test="params.keyword != null and params.keyword != ''">
-                and (MATCH(file_name, file_content) AGAINST(#{params.keyword}) or file_name like concat('%', #{params.keyword}, '%'))
+                and (file_name like '%' || #{params.keyword} || '%' or file_content like '%' || #{params.keyword} || '%')
             </if>
         </where>
         order by create_time desc

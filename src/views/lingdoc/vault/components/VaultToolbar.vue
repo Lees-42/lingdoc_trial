@@ -1,5 +1,21 @@
 <template>
   <div class="vault-toolbar">
+    <!-- Vault 选择器 -->
+    <el-select
+      v-model="selectedVaultPath"
+      placeholder="选择仓库"
+      style="width: 180px"
+      size="default"
+      @change="handleVaultChange"
+    >
+      <el-option
+        v-for="repo in repoList"
+        :key="repo.repoId"
+        :label="repo.repoName + (repo.isDefault === '1' ? ' (默认)' : '')"
+        :value="repo.repoPath"
+      />
+    </el-select>
+    <el-divider direction="vertical" />
     <el-button type="primary" icon="FolderAdd" @click="handleCreateFolder">新建文件夹</el-button>
     <el-button type="success" icon="Upload" @click="emit('upload')">上传文件</el-button>
     <el-button icon="Refresh" @click="emit('refresh')">刷新</el-button>
@@ -32,10 +48,15 @@ import { ElMessageBox } from 'element-plus'
 
 const props = defineProps({
   viewMode: { type: String, default: 'list' },
-  keyword: { type: String, default: '' }
+  keyword: { type: String, default: '' },
+  repoList: { type: Array, default: () => [] },
+  currentVaultPath: { type: String, default: '' }
 })
 
-const emit = defineEmits(['update:viewMode', 'update:keyword', 'search', 'refresh', 'sync', 'create-folder', 'repo-manage', 'upload'])
+const emit = defineEmits([
+  'update:viewMode', 'update:keyword', 'update:currentVaultPath',
+  'search', 'refresh', 'sync', 'create-folder', 'repo-manage', 'upload', 'vault-change'
+])
 
 const viewMode = computed({
   get: () => props.viewMode,
@@ -46,6 +67,18 @@ const keyword = computed({
   get: () => props.keyword,
   set: (val) => emit('update:keyword', val)
 })
+
+const selectedVaultPath = computed({
+  get: () => props.currentVaultPath,
+  set: (val) => emit('update:currentVaultPath', val)
+})
+
+function handleVaultChange(path) {
+  const repo = props.repoList.find(r => r.repoPath === path)
+  if (repo) {
+    emit('vault-change', repo)
+  }
+}
 
 async function handleCreateFolder() {
   try {

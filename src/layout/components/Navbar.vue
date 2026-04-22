@@ -68,6 +68,7 @@ import useAppStore from '@/store/modules/app'
 import useUserStore from '@/store/modules/user'
 import useLockStore from '@/store/modules/lock'
 import useSettingsStore from '@/store/modules/settings'
+import useVaultStore from '@/store/modules/vault'
 import logoAvatar from '@/assets/logo/logo.png'
 
 
@@ -77,6 +78,7 @@ const appStore = useAppStore()
 const userStore = useUserStore()
 const lockStore = useLockStore()
 const settingsStore = useSettingsStore()
+const vaultStore = useVaultStore()
 const displayName = 'LingDoc'
 const displayAvatar = logoAvatar
 
@@ -106,6 +108,7 @@ function logout() {
     cancelButtonText: '取消',
     type: 'warning'
   }).then(() => {
+    vaultStore.clearVault()
     userStore.logOut().then(() => {
       location.href = '/index'
     })

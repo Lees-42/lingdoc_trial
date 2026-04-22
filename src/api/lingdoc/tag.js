@@ -85,3 +85,12 @@ export function unbindTagByTarget(targetType, targetId) {
     params: { targetType, targetId }
   })
 }
+
+// 按目标和标签ID解绑特定标签
+export function unbindTagByTargetAndTagId(targetType, targetId, tagId) {
+  return request({
+    url: '/lingdoc/tag/bind/target-tag',
+    method: 'delete',
+    params: { targetType, targetId, tagId }
+  })
+}

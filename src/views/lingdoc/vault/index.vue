@@ -14,12 +14,15 @@
     <VaultToolbar
       v-model:view-mode="state.viewMode"
       v-model:keyword="state.queryParams.keyword"
+      v-model:current-vault-path="vaultStore.currentVaultPath"
+      :repo-list="vaultStore.repoList"
       @search="handleSearch"
       @refresh="handleRefresh"
       @sync="handleSync"
       @create-folder="handleCreateFolder"
       @repo-manage="state.repoDialogVisible = true"
       @upload="openUploadDialog"
+      @vault-change="handleVaultChange"
     />
 
     <!-- 三栏布局 -->
@@ -72,7 +75,8 @@
     <!-- 仓库管理弹窗 -->
     <VaultRepoManager
       v-model="state.repoDialogVisible"
-      :repo-info="state.repoInfo"
+      :repo-list="vaultStore.repoList"
+      :force-create="state.needForceCreate"
       @success="handleRepoChanged"
     />
 
@@ -142,8 +146,10 @@ import {
   listDuplicateFiles,
   createVaultFolder,
   getVaultRepo,
-  uploadVaultFile
+  uploadVaultFile,
+  listVaultRepos
 } from '@/api/lingdoc/vault'
+import useVaultStore from '@/store/modules/vault'
 import VaultToolbar from './components/VaultToolbar.vue'
 import VaultFileTree from './components/VaultFileTree.vue'
 import VaultFileList from './components/VaultFileList.vue'
@@ -151,6 +157,8 @@ import VaultFilePreview from './components/VaultFilePreview.vue'
 import VaultPreviewDialog from './components/VaultPreviewDialog.vue'
 import VaultRepoManager from './components/VaultRepoManager.vue'
 import DuplicateFileDialog from './components/DuplicateFileDialog.vue'
+
+const vaultStore = useVaultStore()
 
 const state = reactive({
   treeData: [],
@@ -175,6 +183,7 @@ const state = reactive({
   previewDialogVisible: false,
   repoInfo: {},
   repoDialogVisible: false,
+  needForceCreate: false,
   repoInitializing: false,
   duplicateDialogVisible: false,
   duplicateFiles: [],
@@ -418,13 +427,16 @@ async function handleUploadChange(uploadFile) {
   }
 }
 
-/** 加载仓库配置 */
-async function loadRepo() {
+/** 加载仓库列表 */
+async function loadRepos() {
   state.repoInitializing = true
   try {
-    const res = await getVaultRepo()
-    if (res.code === 200 && res.data) {
-      state.repoInfo = res.data
+    await vaultStore.loadRepos()
+    state.repoInfo = vaultStore.currentRepo || {}
+    // 如果没有仓库，强制显示创建弹窗
+    if (vaultStore.repoList.length === 0) {
+      state.needForceCreate = true
+      state.repoDialogVisible = true
     }
   } catch (e) {
     ElMessage.error('获取仓库配置失败')
@@ -433,18 +445,33 @@ async function loadRepo() {
   }
 }
 
+/** 切换 Vault */
+async function handleVaultChange(repo) {
+  vaultStore.setCurrentVault(repo)
+  state.repoInfo = repo
+  state.selectedNode = null
+  state.queryParams.subPath = ''
+  state.queryParams.pageNum = 1
+  state.currentFile = null
+  state.previewContent = ''
+  await loadTree()
+  await loadFiles()
+  ElMessage.success(`已切换到仓库：${repo.repoName}`)
+}
+
 /** 仓库变更后刷新 */
 async function handleRepoChanged() {
-  await loadRepo()
+  await loadRepos()
   await loadTree()
   await loadFiles()
   ElMessage.success('仓库配置已更新')
 }
 
 onMounted(() => {
-  loadRepo()
-  loadTree()
-  loadFiles()
+  loadRepos().then(() => {
+    loadTree()
+    loadFiles()
+  })
 })
 </script>
 

@@ -6,6 +6,7 @@ import { tansParams, blobValidate } from '@/utils/ruoyi'
 import cache from '@/plugins/cache'
 import { saveAs } from 'file-saver'
 import useUserStore from '@/store/modules/user'
+import useVaultStore from '@/store/modules/vault'
 
 let downloadLoadingInstance
 // 是否显示重新登录
@@ -30,6 +31,13 @@ service.interceptors.request.use(config => {
   const interval = (config.headers || {}).interval || 1000
   if (getToken() && !isToken) {
     config.headers['Authorization'] = 'Bearer ' + getToken() // 让每个请求携带自定义token 请根据实际情况自行修改
+  }
+  // 自动携带当前 Vault 路径（lingdoc 模块请求）
+  if (config.url && config.url.startsWith('/lingdoc/')) {
+    const vaultStore = useVaultStore()
+    if (vaultStore.currentVaultPath) {
+      config.headers['X-Vault-Path'] = vaultStore.currentVaultPath
+    }
   }
   // get请求映射params参数
   if (config.method === 'get' && config.params) {

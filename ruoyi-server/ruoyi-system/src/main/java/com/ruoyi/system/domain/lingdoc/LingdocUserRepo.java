@@ -31,6 +31,12 @@ public class LingdocUserRepo
     /** 更新时间 */
     private Date updateTime;
 
+    /** 是否默认仓库：0否 1是 */
+    private String isDefault;
+
+    /** 是否激活：0禁用 1激活 */
+    private String isActive;
+
     /** 备注 */
     private String remark;
 
@@ -104,6 +110,26 @@ public class LingdocUserRepo
         this.remark = remark;
     }
 
+    public String getIsDefault()
+    {
+        return isDefault;
+    }
+
+    public void setIsDefault(String isDefault)
+    {
+        this.isDefault = isDefault;
+    }
+
+    public String getIsActive()
+    {
+        return isActive;
+    }
+
+    public void setIsActive(String isActive)
+    {
+        this.isActive = isActive;
+    }
+
     @Override
     public String toString() {
         return new ToStringBuilder(this, ToStringStyle.MULTI_LINE_STYLE)
@@ -111,6 +137,8 @@ public class LingdocUserRepo
             .append("userId", getUserId())
             .append("repoPath", getRepoPath())
             .append("repoName", getRepoName())
+            .append("isDefault", getIsDefault())
+            .append("isActive", getIsActive())
             .append("createTime", getCreateTime())
             .append("updateTime", getUpdateTime())
             .append("remark", getRemark())

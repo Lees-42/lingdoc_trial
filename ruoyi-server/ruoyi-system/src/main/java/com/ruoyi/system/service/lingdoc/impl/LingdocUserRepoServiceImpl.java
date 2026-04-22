@@ -12,12 +12,14 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.ruoyi.common.datasource.VaultContextHolder;
 import com.ruoyi.common.utils.StringUtils;
 import com.ruoyi.common.utils.uuid.UUID;
 import com.ruoyi.system.domain.lingdoc.LingdocFileIndex;
 import com.ruoyi.system.domain.lingdoc.LingdocUserRepo;
 import com.ruoyi.system.mapper.lingdoc.LingdocFileIndexMapper;
 import com.ruoyi.system.mapper.lingdoc.LingdocUserRepoMapper;
+import com.ruoyi.common.config.SQLiteVaultConfig;
 import com.ruoyi.system.service.lingdoc.ILingdocUserRepoService;
 
 /**
@@ -38,13 +40,24 @@ public class LingdocUserRepoServiceImpl implements ILingdocUserRepoService
     @Autowired
     private LingdocFileIndexMapper fileIndexMapper;
 
+    @Autowired
+    private VaultDbInitializer vaultDbInitializer;
+
     @Override
     public LingdocUserRepo getOrInitUserRepo(Long userId)
     {
-        LingdocUserRepo repo = userRepoMapper.selectByUserId(userId);
+        // 先查找默认仓库
+        LingdocUserRepo repo = userRepoMapper.selectDefaultByUserId(userId);
         if (repo != null)
         {
             return repo;
+        }
+
+        // 查找该用户的任意仓库
+        List<LingdocUserRepo> repos = userRepoMapper.selectByUserId(userId);
+        if (!repos.isEmpty())
+        {
+            return repos.get(0);
         }
 
         // 自动初始化默认仓库
@@ -69,12 +82,23 @@ public class LingdocUserRepoServiceImpl implements ILingdocUserRepoService
         repo.setUserId(userId);
         repo.setRepoPath(defaultPath);
         repo.setRepoName(DEFAULT_REPO_NAME);
+        repo.setIsDefault("1");
+        repo.setIsActive("1");
         repo.setCreateTime(new Date());
         repo.setUpdateTime(new Date());
         userRepoMapper.insert(repo);
 
+        // 初始化 .lingdoc 目录和 SQLite 数据库
+        vaultDbInitializer.initializeVaultDatabase(defaultPath);
+
         log.info("为用户 {} 初始化默认仓库配置: {}", userId, defaultPath);
         return repo;
+    }
+
+    @Override
+    public List<LingdocUserRepo> listUserRepos(Long userId)
+    {
+        return userRepoMapper.selectByUserId(userId);
     }
 
     @Override
@@ -100,43 +124,101 @@ public class LingdocUserRepoServiceImpl implements ILingdocUserRepoService
             throw new RuntimeException("创建仓库目录失败: " + e.getMessage());
         }
 
-        LingdocUserRepo existing = userRepoMapper.selectByUserId(userId);
-        if (existing != null)
-        {
-            // 更新已有配置
-            userRepoMapper.updateRepoPath(userId, repoPath, repoName);
-            existing.setRepoPath(repoPath);
-            existing.setRepoName(repoName);
-            return existing;
-        }
-        else
-        {
-            // 新建配置
-            LingdocUserRepo repo = new LingdocUserRepo();
-            repo.setRepoId(UUID.fastUUID().toString());
-            repo.setUserId(userId);
-            repo.setRepoPath(repoPath);
-            repo.setRepoName(StringUtils.isNotEmpty(repoName) ? repoName : DEFAULT_REPO_NAME);
-            repo.setCreateTime(new Date());
-            repo.setUpdateTime(new Date());
-            userRepoMapper.insert(repo);
-            return repo;
-        }
+        LingdocUserRepo repo = new LingdocUserRepo();
+        repo.setRepoId(UUID.fastUUID().toString());
+        repo.setUserId(userId);
+        repo.setRepoPath(repoPath);
+        repo.setRepoName(StringUtils.isNotEmpty(repoName) ? repoName : DEFAULT_REPO_NAME);
+        repo.setIsDefault("0");
+        repo.setIsActive("1");
+        repo.setCreateTime(new Date());
+        repo.setUpdateTime(new Date());
+        userRepoMapper.insert(repo);
+
+        // 初始化 .lingdoc 目录和 SQLite 数据库
+        vaultDbInitializer.initializeVaultDatabase(repoPath);
+
+        log.info("用户 {} 创建新仓库: {} -> {}", userId, repoName, repoPath);
+        return repo;
     }
 
     @Override
     @Transactional
-    public void migrateRepo(Long userId, String newRepoPath) throws IOException
+    public void deleteRepo(Long userId, String repoId)
+    {
+        LingdocUserRepo repo = userRepoMapper.selectByRepoId(repoId);
+        if (repo == null || !userId.equals(repo.getUserId()))
+        {
+            throw new RuntimeException("仓库不存在或无权限");
+        }
+
+        // 如果删除的是默认仓库，需要重新指定默认仓库
+        boolean wasDefault = "1".equals(repo.getIsDefault());
+
+        userRepoMapper.deleteByRepoId(repoId);
+
+        // 清理 SQLite 数据库文件（可选：保留物理文件）
+        try
+        {
+            Path dbFile = vaultDbInitializer.getVaultDatabasePath(repo.getRepoPath());
+            if (Files.exists(dbFile))
+            {
+                Files.delete(dbFile);
+                log.info("删除仓库 SQLite 数据库: {}", dbFile);
+            }
+        }
+        catch (IOException e)
+        {
+            log.warn("删除仓库 SQLite 数据库失败: {}", repo.getRepoPath(), e);
+        }
+
+        // 如果删除的是默认仓库，将剩余的第一个仓库设为默认
+        if (wasDefault)
+        {
+            List<LingdocUserRepo> remaining = userRepoMapper.selectByUserId(userId);
+            if (!remaining.isEmpty())
+            {
+                userRepoMapper.updateDefaultByRepoId(remaining.get(0).getRepoId(), "1");
+            }
+        }
+
+        log.info("用户 {} 删除仓库: {}", userId, repoId);
+    }
+
+    @Override
+    @Transactional
+    public LingdocUserRepo setDefaultRepo(Long userId, String repoId)
+    {
+        LingdocUserRepo repo = userRepoMapper.selectByRepoId(repoId);
+        if (repo == null || !userId.equals(repo.getUserId()))
+        {
+            throw new RuntimeException("仓库不存在或无权限");
+        }
+
+        // 清除该用户所有仓库的默认标记
+        userRepoMapper.clearDefaultByUserId(userId);
+
+        // 设置指定仓库为默认
+        userRepoMapper.updateDefaultByRepoId(repoId, "1");
+        repo.setIsDefault("1");
+
+        log.info("用户 {} 设置默认仓库: {}", userId, repoId);
+        return repo;
+    }
+
+    @Override
+    @Transactional
+    public void migrateRepo(Long userId, String repoId, String newRepoPath) throws IOException
     {
         if (StringUtils.isEmpty(newRepoPath))
         {
             throw new RuntimeException("新仓库路径不能为空");
         }
 
-        LingdocUserRepo currentRepo = userRepoMapper.selectByUserId(userId);
-        if (currentRepo == null)
+        LingdocUserRepo currentRepo = userRepoMapper.selectByRepoId(repoId);
+        if (currentRepo == null || !userId.equals(currentRepo.getUserId()))
         {
-            throw new RuntimeException("当前用户没有仓库配置，无需迁移");
+            throw new RuntimeException("仓库不存在或无权限");
         }
 
         String oldPath = currentRepo.getRepoPath();
@@ -222,8 +304,27 @@ public class LingdocUserRepoServiceImpl implements ILingdocUserRepoService
             migratedCount++;
         }
 
+        // 迁移 SQLite 数据库文件
+        Path oldDbFile = vaultDbInitializer.getVaultDatabasePath(oldPath);
+        Path newLingdocDir = newPathObj.resolve(SQLiteVaultConfig.LINGDOC_DIR);
+        if (!Files.exists(newLingdocDir))
+        {
+            Files.createDirectories(newLingdocDir);
+        }
+        Path newDbFile = newLingdocDir.resolve(SQLiteVaultConfig.DB_FILE_NAME);
+        if (Files.exists(oldDbFile))
+        {
+            Files.copy(oldDbFile, newDbFile, StandardCopyOption.REPLACE_EXISTING);
+            log.info("迁移 SQLite 数据库: {} -> {}", oldDbFile, newDbFile);
+        }
+        else
+        {
+            // 如果旧数据库不存在，在新位置初始化
+            vaultDbInitializer.initializeVaultDatabase(newRepoPath);
+        }
+
         // 更新仓库配置
-        userRepoMapper.updateRepoPath(userId, newRepoPath, currentRepo.getRepoName());
+        userRepoMapper.updateRepoPath(repoId, newRepoPath);
 
         log.info("用户 {} 仓库迁移完成: {} -> {}, 迁移文件数: {}", userId, oldPath, newRepoPath, migratedCount);
     }
@@ -231,7 +332,33 @@ public class LingdocUserRepoServiceImpl implements ILingdocUserRepoService
     @Override
     public String getUserRepoPath(Long userId)
     {
-        return getOrInitUserRepo(userId).getRepoPath();
+        // 优先使用 Vault 上下文中的路径（前端通过 X-Vault-Path 传递）
+        String vaultPath = VaultContextHolder.getCurrentVaultPath();
+        if (StringUtils.isNotEmpty(vaultPath))
+        {
+            return vaultPath;
+        }
+        LingdocUserRepo repo = getOrInitUserRepo(userId);
+        return repo != null ? repo.getRepoPath() : null;
+    }
+
+    @Override
+    public LingdocUserRepo getDefaultUserRepo(Long userId)
+    {
+        // 先查找默认仓库
+        LingdocUserRepo repo = userRepoMapper.selectDefaultByUserId(userId);
+        if (repo != null)
+        {
+            return repo;
+        }
+        // 查找该用户的任意仓库
+        List<LingdocUserRepo> repos = userRepoMapper.selectByUserId(userId);
+        if (!repos.isEmpty())
+        {
+            return repos.get(0);
+        }
+        // 不自动创建，返回 null
+        return null;
     }
 
     /**

@@ -130,7 +130,15 @@ export function uploadVaultFile(data) {
 
 // ==================== 仓库管理 ====================
 
-// 获取当前用户仓库配置（含自动初始化）
+// 获取当前用户所有仓库列表
+export function listVaultRepos() {
+  return request({
+    url: '/lingdoc/vault/repos',
+    method: 'get'
+  })
+}
+
+// 获取当前用户默认仓库配置（含自动初始化）
 export function getVaultRepo() {
   return request({
     url: '/lingdoc/vault/repo',
@@ -147,10 +155,26 @@ export function createVaultRepo(data) {
   })
 }
 
-// 迁移仓库
-export function migrateVaultRepo(data) {
+// 删除仓库
+export function deleteVaultRepo(repoId) {
   return request({
-    url: '/lingdoc/vault/repo/migrate',
+    url: '/lingdoc/vault/repo/' + repoId,
+    method: 'delete'
+  })
+}
+
+// 设置默认仓库
+export function setDefaultVaultRepo(repoId) {
+  return request({
+    url: '/lingdoc/vault/repo/' + repoId + '/default',
+    method: 'put'
+  })
+}
+
+// 迁移仓库
+export function migrateVaultRepo(repoId, data) {
+  return request({
+    url: '/lingdoc/vault/repo/' + repoId + '/migrate',
     method: 'put',
     data: data
   })

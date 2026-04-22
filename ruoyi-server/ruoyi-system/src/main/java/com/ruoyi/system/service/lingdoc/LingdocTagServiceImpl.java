@@ -9,8 +9,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.ruoyi.common.utils.StringUtils;
 import com.ruoyi.common.utils.uuid.UUID;
+import com.ruoyi.system.domain.lingdoc.LingdocFileIndex;
 import com.ruoyi.system.domain.lingdoc.LingdocTag;
 import com.ruoyi.system.domain.lingdoc.LingdocTagBinding;
+import com.ruoyi.system.mapper.lingdoc.LingdocFileIndexMapper;
 import com.ruoyi.system.mapper.lingdoc.LingdocTagBindingMapper;
 import com.ruoyi.system.mapper.lingdoc.LingdocTagMapper;
 
@@ -60,13 +62,13 @@ public class LingdocTagServiceImpl implements ILingdocTagService
     @Transactional
     public int deleteLingdocTagById(String tagId)
     {
-        // 先删除所有绑定关系
+        // 先删除所有绑定关系（通过 Service 方法触发 cleanupOrphanTag）
         LingdocTagBinding query = new LingdocTagBinding();
         query.setTagId(tagId);
         List<LingdocTagBinding> bindings = tagBindingMapper.selectLingdocTagBindingList(query);
         for (LingdocTagBinding binding : bindings)
         {
-            tagBindingMapper.deleteLingdocTagBindingById(binding.getBindingId());
+            deleteLingdocTagBindingById(binding.getBindingId());
         }
         return tagMapper.deleteLingdocTagById(tagId);
     }
@@ -111,15 +113,60 @@ public class LingdocTagServiceImpl implements ILingdocTagService
             }
         }
         
-        // 如果是文件，继承父目录的标签
+        // 如果是文件，查询父目录的继承标签
         if ("F".equals(targetType))
         {
-            // 从 file_index 中获取 sub_path
-            // 这里简化处理：由调用方传入目录路径进行继承查询
-            // 完整实现需要在 Controller 层获取文件的 sub_path，然后查询父目录标签
+            LingdocFileIndex file = fileIndexMapper.selectLingdocFileIndexById(targetId);
+            if (file != null && StringUtils.isNotEmpty(file.getSubPath()))
+            {
+                String subPath = file.getSubPath();
+                // 拆分父目录路径链，逐级查询标签
+                String[] parts = subPath.split("/");
+                String currentPath = "";
+                for (int i = 0; i < parts.length; i++)
+                {
+                    String part = parts[i].trim();
+                    if (StringUtils.isEmpty(part))
+                    {
+                        continue;
+                    }
+                    currentPath = StringUtils.isEmpty(currentPath) ? part : currentPath + "/" + part;
+                    
+                    List<LingdocTagBinding> inheritedBindings = tagBindingMapper.selectLingdocTagBindingByTarget("D", currentPath);
+                    for (LingdocTagBinding binding : inheritedBindings)
+                    {
+                        LingdocTag tag = tagMapper.selectLingdocTagById(binding.getTagId());
+                        if (tag != null && !containsTagId(result, tag.getTagId()))
+                        {
+                            Map<String, Object> item = new HashMap<>();
+                            item.put("tagId", tag.getTagId());
+                            item.put("tagName", tag.getTagName());
+                            item.put("tagColor", tag.getTagColor());
+                            item.put("bindType", "1"); // 1 = 继承
+                            item.put("bindingId", binding.getBindingId());
+                            result.add(item);
+                        }
+                    }
+                }
+            }
         }
         
         return result;
+    }
+
+    /**
+     * 检查结果列表中是否已包含指定 tagId
+     */
+    private boolean containsTagId(List<Map<String, Object>> result, String tagId)
+    {
+        for (Map<String, Object> item : result)
+        {
+            if (tagId.equals(item.get("tagId")))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override
@@ -153,6 +200,28 @@ public class LingdocTagServiceImpl implements ILingdocTagService
         int result = tagBindingMapper.deleteLingdocTagBindingByTarget(targetType, targetId);
         for (LingdocTagBinding binding : bindings)
         {
+            cleanupOrphanTag(binding.getTagId());
+        }
+        return result;
+    }
+
+    @Override
+    @Transactional
+    public int deleteLingdocTagBindingByTargetAndTagId(String targetType, String targetId, String tagId)
+    {
+        LingdocTagBinding query = new LingdocTagBinding();
+        query.setTargetType(targetType);
+        query.setTargetId(targetId);
+        query.setTagId(tagId);
+        List<LingdocTagBinding> bindings = tagBindingMapper.selectLingdocTagBindingList(query);
+        if (bindings == null || bindings.isEmpty())
+        {
+            return 0;
+        }
+        int result = 0;
+        for (LingdocTagBinding binding : bindings)
+        {
+            result += tagBindingMapper.deleteLingdocTagBindingById(binding.getBindingId());
             cleanupOrphanTag(binding.getTagId());
         }
         return result;

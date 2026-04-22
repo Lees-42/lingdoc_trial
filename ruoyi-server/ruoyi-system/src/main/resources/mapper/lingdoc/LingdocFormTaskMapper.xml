@@ -45,9 +45,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="userId != null"> and user_id = #{userId}</if>
             <if test="status != null  and status != ''"> and status = #{status}</if>
             <if test="taskName != null  and taskName != ''">
-                AND (task_name like concat('%', #{taskName}, '%')
-                <if test="taskName != null  and taskName != ''"> or MATCH(task_name) AGAINST(#{taskName})</if>
-                )
+                AND task_name LIKE '%' || #{taskName} || '%'
             </if>
         </where>
         order by create_time desc

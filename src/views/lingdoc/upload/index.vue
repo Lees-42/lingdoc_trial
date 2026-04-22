@@ -344,7 +344,7 @@ import { UploadFilled, FolderOpened } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import VaultFolderPicker from '@/components/VaultFolderPicker/index.vue'
 import { getVaultTree, uploadVaultFile, delVaultFile } from '@/api/lingdoc/vault'
-import { listTag, addTag, bindTag, getFolderTags, unbindTagByTarget } from '@/api/lingdoc/tag'
+import { listTag, addTag, bindTag, getFolderTags, unbindTagByTarget, unbindTagByTargetAndTagId } from '@/api/lingdoc/tag'
 
 const { proxy } = getCurrentInstance()
 
@@ -514,7 +514,7 @@ function computeInheritedTags(filePath) {
   const inherited = new Map()
   const cleanPath = filePath.replace(/\/$/, '')
   for (const [folderPath, tags] of Object.entries(folderTagMap.value)) {
-    if (cleanPath.startsWith(folderPath)) {
+    if (cleanPath === folderPath || cleanPath.startsWith(folderPath + '/')) {
       for (const tag of tags) {
         inherited.set(tag.tagId, tag)
       }
@@ -654,17 +654,21 @@ async function addFolderTag() {
 /** 移除父文件夹标签 */
 async function removeFolderTag(name) {
   const currentTags = folderTagMap.value[selectedParentFolder.value] || []
-  folderTagMap.value[selectedParentFolder.value] = currentTags.filter(t => t.tagName !== name)
+  const tagToRemove = currentTags.find(t => t.tagName === name)
+  const remaining = currentTags.filter(t => t.tagName !== name)
 
-  // 同步到后端：先解绑该目录所有标签，再重新绑定剩余标签
-  try {
-    await unbindTagByTarget('D', selectedParentFolder.value)
-    const remaining = folderTagMap.value[selectedParentFolder.value] || []
-    for (const tag of remaining) {
-      await bindTag({ targetType: 'D', targetId: selectedParentFolder.value, tagId: tag.tagId })
+  folderTagMap.value = {
+    ...folderTagMap.value,
+    [selectedParentFolder.value]: remaining
+  }
+
+  // 同步到后端：精确解绑被删除的标签
+  if (tagToRemove) {
+    try {
+      await unbindTagByTargetAndTagId('D', selectedParentFolder.value, tagToRemove.tagId)
+    } catch (e) {
+      ElMessage.error('更新文件夹标签失败')
     }
-  } catch (e) {
-    ElMessage.error('更新文件夹标签失败')
   }
 
   syncInheritedTags()
@@ -722,17 +726,40 @@ function handleBatchOrganize() {
 }
 
 /** 编辑按钮 */
-function handleEdit(row) {
+async function handleEdit(row) {
   Object.assign(form, {
     fileId: row.fileId,
     originalName: row.originalName,
     fileType: row.fileType,
     suggestedName: row.suggestedName || row.originalName,
-    suggestedPath: row.suggestedPath,
+    suggestedPath: row.suggestedPath || '/',
     remark: row.remark || '',
     tagNames: (row.tags || []).map(t => t.tagName)
   })
+
+  // 加载路径链上所有文件夹的标签（用于继承标签计算和编辑弹窗显示）
   const chain = resolvePathChain(row.suggestedPath)
+  const newMap = { ...folderTagMap.value }
+  const loadPromises = chain
+    .map(folder => folder.path)
+    .filter(path => !newMap[path])
+    .map(async path => {
+      try {
+        const res = await getFolderTags(path)
+        if (res.code === 200 && res.data) {
+          newMap[path] = res.data.map(t => ({
+            tagId: t.tagId,
+            tagName: t.tagName,
+            tagColor: t.tagColor || '#409EFF'
+          }))
+        }
+      } catch (e) {
+        console.error('加载文件夹标签失败', path, e)
+      }
+    })
+  await Promise.all(loadPromises)
+  folderTagMap.value = newMap
+
   selectedParentFolder.value = chain.length > 0 ? chain[0].path : ''
   pendingFileTag.value = ''
   pendingFolderTag.value = ''
@@ -766,6 +793,10 @@ async function submitForm() {
   if (!form.suggestedName.trim()) {
     ElMessage.warning('文件名不能为空')
     return
+  }
+  // 路径为空时默认仓库根目录
+  if (!form.suggestedPath || form.suggestedPath.trim() === '') {
+    form.suggestedPath = '/'
   }
 
   const idx = fileList.value.findIndex(f => f.fileId === form.fileId)
@@ -870,12 +901,19 @@ async function handleConfirm(row) {
         _raw: null
       }
 
+      // 从 vaultPath 推导 suggestedPath
+      const vaultDir = result.vaultPath ? ('/' + result.vaultPath.replace(/\/[^\/]*$/, '')) : '/'
+      fileList.value[idx].suggestedPath = vaultDir === '/' ? '/' : vaultDir
+
       // 保存文件标签
       if (row.tags && row.tags.length > 0) {
         for (const tag of row.tags) {
           await bindTag({ targetType: 'F', targetId: result.fileId, tagId: tag.tagId })
         }
       }
+
+      // 计算继承标签
+      fileList.value[idx].inheritedTags = computeInheritedTags(fileList.value[idx].suggestedPath)
 
       ElMessage.success('文件已保存到 Vault')
     } else {
@@ -937,12 +975,20 @@ async function handleBatchConfirm() {
           status: 'confirmed',
           _raw: null
         }
+        // 从 vaultPath 推导 suggestedPath
+        const vaultDir = result.vaultPath ? ('/' + result.vaultPath.replace(/\/[^\/]*$/, '')) : '/'
+        fileList.value[idx].suggestedPath = vaultDir === '/' ? '/' : vaultDir
+
         // 保存文件标签
         if (row.tags && row.tags.length > 0) {
           for (const tag of row.tags) {
             await bindTag({ targetType: 'F', targetId: result.fileId, tagId: tag.tagId })
           }
         }
+
+        // 计算继承标签
+        fileList.value[idx].inheritedTags = computeInheritedTags(fileList.value[idx].suggestedPath)
+
         successCount++
       } else {
         failCount++
