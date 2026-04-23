@@ -39,9 +39,11 @@ public class VaultDataSourceAspect
     @Pointcut("execution(* com.ruoyi.system.service.lingdoc.ILingdocVaultService.*(..)) || "
             + "execution(* com.ruoyi.system.service.lingdoc.ILingdocTagService.*(..)) || "
             + "execution(* com.ruoyi.system.service.lingdoc.ILingdocFormTaskService.*(..)) || "
+            + "execution(* com.ruoyi.system.service.lingdoc.ILingdocInboxService.*(..)) || "
             + "execution(* com.ruoyi.system.service.lingdoc.LingdocVaultServiceImpl.*(..)) || "
             + "execution(* com.ruoyi.system.service.lingdoc.LingdocTagServiceImpl.*(..)) || "
-            + "execution(* com.ruoyi.system.service.lingdoc.LingdocFormTaskServiceImpl.*(..))")
+            + "execution(* com.ruoyi.system.service.lingdoc.LingdocFormTaskServiceImpl.*(..)) || "
+            + "execution(* com.ruoyi.system.service.lingdoc.LingdocInboxServiceImpl.*(..))")
     public void lingdocServicePointCut()
     {
     }

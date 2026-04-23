@@ -229,3 +229,40 @@ CREATE TABLE IF NOT EXISTS `lingdoc_form_reference` (
 
 CREATE INDEX IF NOT EXISTS `idx_form_reference_task_id` ON `lingdoc_form_reference` (`task_id`);
 CREATE INDEX IF NOT EXISTS `idx_form_reference_doc_id` ON `lingdoc_form_reference` (`doc_id`);
+
+-- ----------------------------
+-- 10、收件箱（Inbox）文件表
+-- 存储已上传但未确认归档的文件，确认后移入 lingdoc_file_index
+-- ----------------------------
+CREATE TABLE IF NOT EXISTS `lingdoc_inbox` (
+  `inbox_id`        TEXT    NOT NULL PRIMARY KEY,
+  `user_id`         INTEGER NOT NULL,
+  `original_name`   TEXT    NOT NULL,
+  `file_type`       TEXT    NOT NULL,
+  `file_size`       INTEGER NOT NULL,
+  `abs_path`        TEXT    NOT NULL,
+  `status`          TEXT    DEFAULT 'uploaded',
+  `suggested_name`  TEXT    DEFAULT NULL,
+  `suggested_path`  TEXT    DEFAULT NULL,
+  `tag_ids`         TEXT    DEFAULT NULL,
+  `ai_summary`      TEXT    DEFAULT NULL,
+  `ai_keywords`     TEXT    DEFAULT NULL,
+  `confidence`      REAL    DEFAULT 0.00,
+  `token_cost`      INTEGER DEFAULT 0,
+  `error_msg`       TEXT    DEFAULT NULL,
+  `remark`          TEXT    DEFAULT NULL,
+  `create_time`     TEXT    DEFAULT (datetime('now','localtime')),
+  `update_time`     TEXT    DEFAULT (datetime('now','localtime'))
+);
+
+CREATE INDEX IF NOT EXISTS `idx_inbox_user_id` ON `lingdoc_inbox` (`user_id`);
+CREATE INDEX IF NOT EXISTS `idx_inbox_status` ON `lingdoc_inbox` (`status`);
+CREATE INDEX IF NOT EXISTS `idx_inbox_user_status` ON `lingdoc_inbox` (`user_id`, `status`);
+
+-- 触发器：自动更新 update_time
+CREATE TRIGGER IF NOT EXISTS `trg_inbox_update_time`
+AFTER UPDATE ON `lingdoc_inbox`
+FOR EACH ROW
+BEGIN
+  UPDATE `lingdoc_inbox` SET `update_time` = datetime('now','localtime') WHERE `inbox_id` = NEW.inbox_id;
+END;
