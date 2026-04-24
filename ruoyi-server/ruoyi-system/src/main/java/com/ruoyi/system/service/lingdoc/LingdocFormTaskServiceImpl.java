@@ -16,6 +16,8 @@ import org.jsoup.select.Elements;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import com.ruoyi.common.config.RuoYiConfig;
 import com.ruoyi.common.constant.Constants;
 import com.ruoyi.common.utils.DateUtils;
@@ -34,6 +36,7 @@ import com.ruoyi.system.mapper.lingdoc.LingdocFormFieldMapper;
 import com.ruoyi.system.mapper.lingdoc.LingdocFormReferenceMapper;
 import com.ruoyi.system.mapper.lingdoc.LingdocFormTaskMapper;
 import com.ruoyi.system.service.lingdoc.ai.IAiFormService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * 表格填写任务 服务层实现
@@ -43,6 +46,7 @@ import com.ruoyi.system.service.lingdoc.ai.IAiFormService;
 @Service
 public class LingdocFormTaskServiceImpl implements ILingdocFormTaskService
 {
+    private static final Logger log = LoggerFactory.getLogger(LingdocFormTaskServiceImpl.class);
     @Autowired
     private LingdocFormTaskMapper formTaskMapper;
 
@@ -57,6 +61,9 @@ public class LingdocFormTaskServiceImpl implements ILingdocFormTaskService
 
     @Autowired
     private IAiFormService aiFormService;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     /**
      * 查询表格填写任务
@@ -324,6 +331,10 @@ public class LingdocFormTaskServiceImpl implements ILingdocFormTaskService
             {
                 renderHtml(originalPath, filledPath, result.getFilledValues());
             }
+            else if ("docx".equals(ext) || "xlsx".equals(ext) || "xls".equals(ext))
+            {
+                renderWithPython(originalPath, filledPath, result.getFilledValues(), ext);
+            }
             else
             {
                 // 非 HTML 且 AI 未返回文件：复制原文件（未填写）
@@ -350,6 +361,55 @@ public class LingdocFormTaskServiceImpl implements ILingdocFormTaskService
         formTaskMapper.updateLingdocFormTask(task);
 
         return filledPath;
+    }
+
+    /**
+     * 调用 Python 渲染引擎处理 Word/Excel 文档
+     */
+    private void renderWithPython(String inputPath, String outputPath,
+            Map<String, String> filledValues, String ext)
+    {
+        try
+        {
+            // Python 脚本路径（从项目配置中获取，可配置化）
+            String scriptPath = RuoYiConfig.getProfile() + "/lingdoc-ai/python/render/form_render_service.py";
+
+            // 将 filledValues 转为 JSON 字符串
+            String jsonValues = objectMapper.writeValueAsString(filledValues);
+
+            ProcessBuilder pb = new ProcessBuilder(
+                    "python3", scriptPath, inputPath, outputPath, jsonValues);
+            pb.redirectErrorStream(true);
+
+            Process process = pb.start();
+
+            // 读取 Python 输出
+            String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+            int exitCode = process.waitFor();
+
+            if (exitCode != 0)
+            {
+                log.error("Python 渲染失败: exitCode={}, output={}", exitCode, output);
+                throw new RuntimeException("Python 渲染失败: " + output);
+            }
+
+            // 解析 JSON 结果
+            @SuppressWarnings("unchecked")
+            Map<String, Object> result = objectMapper.readValue(output, Map.class);
+            Boolean success = (Boolean) result.get("success");
+            if (!Boolean.TRUE.equals(success))
+            {
+                throw new RuntimeException("渲染失败: " + result.get("error"));
+            }
+
+            log.info("Python 渲染完成, filledCount={}, outputPath={}",
+                    result.get("filledCount"), outputPath);
+        }
+        catch (Exception e)
+        {
+            log.error("调用 Python 渲染引擎失败", e);
+            throw new RuntimeException("文档渲染失败: " + e.getMessage(), e);
+        }
     }
 
     /**
