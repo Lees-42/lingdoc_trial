@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.system.mapper.lingdoc.LingdocFileIndexMapper">
+
+    <resultMap type="com.ruoyi.system.domain.lingdoc.LingdocFileIndex" id="LingdocFileIndexResult">
+        <result property="fileId" column="file_id"/>
+        <result property="userId" column="user_id" typeHandler="com.ruoyi.system.typehandler.SafeLongTypeHandler"/>
+        <result property="fileName" column="file_name"/>
+        <result property="vaultPath" column="vault_path"/>
+        <result property="absPath" column="abs_path"/>
+        <result property="fileType" column="file_type"/>
+        <result property="fileSize" column="file_size" typeHandler="com.ruoyi.system.typehandler.SafeLongTypeHandler"/>
+        <result property="checksum" column="checksum"/>
+        <result property="subPath" column="sub_path"/>
+        <result property="sourceType" column="source_type"/>
+        <result property="fileContent" column="file_content"/>
+        <result property="contentPath" column="content_path"/>
+        <result property="contentSize" column="content_size" typeHandler="com.ruoyi.system.typehandler.SafeLongTypeHandler"/>
+        <result property="isDesensitized" column="is_desensitized"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+    </resultMap>
+
+    <sql id="selectLingdocFileIndexVo">
+        select file_id, user_id, file_name, vault_path, abs_path, file_type, file_size, checksum, sub_path, source_type, file_content, content_path, content_size, is_desensitized, create_time, update_time
+        from lingdoc_file_index
+    </sql>
+
+    <select id="selectLingdocFileIndexById" parameterType="String" resultMap="LingdocFileIndexResult">
+        <include refid="selectLingdocFileIndexVo"/>
+        where file_id = #{fileId}
+    </select>
+
+    <select id="selectLingdocFileIndexList" parameterType="com.ruoyi.system.domain.lingdoc.LingdocFileIndex" resultMap="LingdocFileIndexResult">
+        <include refid="selectLingdocFileIndexVo"/>
+        <where>
+            <if test="userId != null"> and user_id = #{userId}</if>
+            <if test="fileName != null and fileName != ''"> and file_name like concat('%', #{fileName}, '%')</if>
+            <if test="fileType != null and fileType != ''"> and file_type = #{fileType}</if>
+            <choose>
+                <when test="subPath != null and subPath != '' and !&quot;/&quot;.equals(subPath)"> and sub_path = #{subPath}</when>
+                <when test="subPath == '' or &quot;/&quot;.equals(subPath)"> and (sub_path = '' or sub_path is null)</when>
+            </choose>
+            <if test="sourceType != null and sourceType != ''"> and source_type = #{sourceType}</if>
+            <if test="checksum != null and checksum != ''"> and checksum = #{checksum}</if>
+            <if test="isDesensitized != null and isDesensitized != ''"> and is_desensitized = #{isDesensitized}</if>
+            <if test="params.keyword != null and params.keyword != ''">
+                and (file_name like '%' || #{params.keyword} || '%' or file_content like '%' || #{params.keyword} || '%')
+            </if>
+        </where>
+        order by create_time desc
+    </select>
+
+    <select id="selectDistinctSubPathByUserId" parameterType="Long" resultType="String">
+        select distinct sub_path from lingdoc_file_index where user_id = #{userId} and sub_path is not null and sub_path != ''
+    </select>
+
+    <select id="selectLingdocFileIndexByChecksum" resultMap="LingdocFileIndexResult">
+        <include refid="selectLingdocFileIndexVo"/>
+        where user_id = #{userId} and checksum = #{checksum}
+    </select>
+
+    <select id="selectDuplicateChecksums" resultType="String">
+        select checksum from lingdoc_file_index
+        where user_id = #{userId}
+        group by checksum
+        having count(*) > 1
+    </select>
+
+    <select id="selectBySubPathPrefix" resultMap="LingdocFileIndexResult">
+        <include refid="selectLingdocFileIndexVo"/>
+        where user_id = #{userId}
+          and (sub_path = #{subPath} or sub_path like #{subPath} || '/%')
+    </select>
+
+    <insert id="insertLingdocFileIndex" parameterType="com.ruoyi.system.domain.lingdoc.LingdocFileIndex">
+        insert into lingdoc_file_index
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="fileId != null">file_id,</if>
+            <if test="userId != null">user_id,</if>
+            <if test="fileName != null">file_name,</if>
+            <if test="vaultPath != null">vault_path,</if>
+            <if test="absPath != null">abs_path,</if>
+            <if test="fileType != null">file_type,</if>
+            <if test="fileSize != null">file_size,</if>
+            <if test="checksum != null">checksum,</if>
+            <if test="subPath != null">sub_path,</if>
+            <if test="sourceType != null">source_type,</if>
+            <if test="fileContent != null">file_content,</if>
+            <if test="contentPath != null">content_path,</if>
+            <if test="contentSize != null">content_size,</if>
+            <if test="isDesensitized != null">is_desensitized,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateTime != null">update_time,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="fileId != null">#{fileId},</if>
+            <if test="userId != null">#{userId},</if>
+            <if test="fileName != null">#{fileName},</if>
+            <if test="vaultPath != null">#{vaultPath},</if>
+            <if test="absPath != null">#{absPath},</if>
+            <if test="fileType != null">#{fileType},</if>
+            <if test="fileSize != null">#{fileSize},</if>
+            <if test="checksum != null">#{checksum},</if>
+            <if test="subPath != null">#{subPath},</if>
+            <if test="sourceType != null">#{sourceType},</if>
+            <if test="fileContent != null">#{fileContent},</if>
+            <if test="contentPath != null">#{contentPath},</if>
+            <if test="contentSize != null">#{contentSize},</if>
+            <if test="isDesensitized != null">#{isDesensitized},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+        </trim>
+    </insert>
+
+    <update id="updateLingdocFileIndex" parameterType="com.ruoyi.system.domain.lingdoc.LingdocFileIndex">
+        update lingdoc_file_index
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="userId != null">user_id = #{userId},</if>
+            <if test="fileName != null">file_name = #{fileName},</if>
+            <if test="vaultPath != null">vault_path = #{vaultPath},</if>
+            <if test="absPath != null">abs_path = #{absPath},</if>
+            <if test="fileType != null">file_type = #{fileType},</if>
+            <if test="fileSize != null">file_size = #{fileSize},</if>
+            <if test="checksum != null">checksum = #{checksum},</if>
+            <if test="subPath != null">sub_path = #{subPath},</if>
+            <if test="sourceType != null">source_type = #{sourceType},</if>
+            <if test="fileContent != null">file_content = #{fileContent},</if>
+            <if test="contentPath != null">content_path = #{contentPath},</if>
+            <if test="contentSize != null">content_size = #{contentSize},</if>
+            <if test="isDesensitized != null">is_desensitized = #{isDesensitized},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+        </trim>
+        where file_id = #{fileId}
+    </update>
+
+    <delete id="deleteLingdocFileIndexById" parameterType="String">
+        delete from lingdoc_file_index where file_id = #{fileId}
+    </delete>
+
+    <delete id="deleteLingdocFileIndexByIds" parameterType="String">
+        delete from lingdoc_file_index where file_id in
+        <foreach collection="array" item="fileId" open="(" separator="," close=")">
+            #{fileId}
+        </foreach>
+    </delete>
+
+    <delete id="deleteLingdocFileIndexByUserId" parameterType="Long">
+        delete from lingdoc_file_index where user_id = #{userId}
+    </delete>
+
+</mapper>

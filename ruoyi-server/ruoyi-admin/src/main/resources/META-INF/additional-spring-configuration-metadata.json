@@ -1,0 +1,84 @@
+{
+    "properties": [
+        {
+            "name": "ruoyi.name",
+            "type": "java.lang.String",
+            "description": "Project display name."
+        },
+        {
+            "name": "ruoyi.version",
+            "type": "java.lang.String",
+            "description": "Project version."
+        },
+        {
+            "name": "ruoyi.copyrightYear",
+            "type": "java.lang.String",
+            "description": "Copyright year."
+        },
+        {
+            "name": "ruoyi.profile",
+            "type": "java.lang.String",
+            "description": "Base upload profile path."
+        },
+        {
+            "name": "ruoyi.addressEnabled",
+            "type": "java.lang.Boolean",
+            "description": "Whether to resolve IP geolocation."
+        },
+        {
+            "name": "ruoyi.captchaType",
+            "type": "java.lang.String",
+            "description": "Captcha type."
+        },
+        {
+            "name": "user.password.maxRetryCount",
+            "type": "java.lang.Integer",
+            "description": "Maximum password retry count."
+        },
+        {
+            "name": "user.password.lockTime",
+            "type": "java.lang.Integer",
+            "description": "Password lock duration in minutes."
+        },
+        {
+            "name": "token.header",
+            "type": "java.lang.String",
+            "description": "Token HTTP header name."
+        },
+        {
+            "name": "token.secret",
+            "type": "java.lang.String",
+            "description": "Token signing secret."
+        },
+        {
+            "name": "token.expireTime",
+            "type": "java.lang.Integer",
+            "description": "Token expiration in minutes."
+        },
+        {
+            "name": "referer.enabled",
+            "type": "java.lang.Boolean",
+            "description": "Whether referer validation is enabled."
+        },
+        {
+            "name": "referer.allowed-domains",
+            "type": "java.lang.String",
+            "description": "Allowed domains for referer validation."
+        },
+        {
+            "name": "xss.enabled",
+            "type": "java.lang.Boolean",
+            "description": "Whether XSS filter is enabled."
+        },
+        {
+            "name": "xss.excludes",
+            "type": "java.lang.String",
+            "description": "Excluded URL patterns for XSS filter."
+        },
+        {
+            "name": "xss.urlPatterns",
+            "type": "java.lang.String",
+            "description": "Included URL patterns for XSS filter."
+        }
+    ]
+}

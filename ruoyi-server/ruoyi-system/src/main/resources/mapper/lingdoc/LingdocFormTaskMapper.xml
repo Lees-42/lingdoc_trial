@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.system.mapper.lingdoc.LingdocFormTaskMapper">
+    
+    <resultMap type="com.ruoyi.system.domain.lingdoc.LingdocFormTask" id="LingdocFormTaskResult">
+        <result property="taskId" column="task_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="taskName" column="task_name"/>
+        <result property="originalFileId" column="original_file_id"/>
+        <result property="originalFileUrl" column="original_file_url"/>
+        <result property="originalFileName" column="original_file_name"/>
+        <result property="filledFileId" column="filled_file_id"/>
+        <result property="filledFileUrl" column="filled_file_url"/>
+        <result property="filledFileName" column="filled_file_name"/>
+        <result property="status" column="status"/>
+        <result property="aiResult" column="ai_result"/>
+        <result property="fieldCount" column="field_count"/>
+        <result property="confirmedCount" column="confirmed_count"/>
+        <result property="tokenCost" column="token_cost"/>
+        <result property="errorMsg" column="error_msg"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="remark" column="remark"/>
+    </resultMap>
+
+    <sql id="selectLingdocFormTaskVo">
+        select task_id, user_id, task_name, original_file_id, original_file_url, original_file_name,
+               filled_file_id, filled_file_url, filled_file_name, status, ai_result, field_count,
+               confirmed_count, token_cost, error_msg, create_by, create_time, update_by, update_time, remark
+        from lingdoc_form_task
+    </sql>
+
+    <select id="selectLingdocFormTaskById" parameterType="String" resultMap="LingdocFormTaskResult">
+        <include refid="selectLingdocFormTaskVo"/>
+        where task_id = #{taskId}
+    </select>
+
+    <select id="selectLingdocFormTaskList" parameterType="com.ruoyi.system.domain.lingdoc.LingdocFormTask" resultMap="LingdocFormTaskResult">
+        <include refid="selectLingdocFormTaskVo"/>
+        <where>
+            <if test="userId != null"> and user_id = #{userId}</if>
+            <if test="status != null  and status != ''"> and status = #{status}</if>
+            <if test="taskName != null  and taskName != ''">
+                AND task_name LIKE '%' || #{taskName} || '%'
+            </if>
+        </where>
+        order by create_time desc
+    </select>
+    
+    <insert id="insertLingdocFormTask" parameterType="com.ruoyi.system.domain.lingdoc.LingdocFormTask">
+        insert into lingdoc_form_task
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="taskId != null">task_id,</if>
+            <if test="userId != null">user_id,</if>
+            <if test="taskName != null">task_name,</if>
+            <if test="originalFileId != null">original_file_id,</if>
+            <if test="originalFileUrl != null">original_file_url,</if>
+            <if test="originalFileName != null">original_file_name,</if>
+            <if test="filledFileId != null">filled_file_id,</if>
+            <if test="filledFileUrl != null">filled_file_url,</if>
+            <if test="filledFileName != null">filled_file_name,</if>
+            <if test="status != null">status,</if>
+            <if test="aiResult != null">ai_result,</if>
+            <if test="fieldCount != null">field_count,</if>
+            <if test="confirmedCount != null">confirmed_count,</if>
+            <if test="tokenCost != null">token_cost,</if>
+            <if test="errorMsg != null">error_msg,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateBy != null">update_by,</if>
+            <if test="updateTime != null">update_time,</if>
+            <if test="remark != null">remark,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="taskId != null">#{taskId},</if>
+            <if test="userId != null">#{userId},</if>
+            <if test="taskName != null">#{taskName},</if>
+            <if test="originalFileId != null">#{originalFileId},</if>
+            <if test="originalFileUrl != null">#{originalFileUrl},</if>
+            <if test="originalFileName != null">#{originalFileName},</if>
+            <if test="filledFileId != null">#{filledFileId},</if>
+            <if test="filledFileUrl != null">#{filledFileUrl},</if>
+            <if test="filledFileName != null">#{filledFileName},</if>
+            <if test="status != null">#{status},</if>
+            <if test="aiResult != null">#{aiResult},</if>
+            <if test="fieldCount != null">#{fieldCount},</if>
+            <if test="confirmedCount != null">#{confirmedCount},</if>
+            <if test="tokenCost != null">#{tokenCost},</if>
+            <if test="errorMsg != null">#{errorMsg},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateBy != null">#{updateBy},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+            <if test="remark != null">#{remark},</if>
+        </trim>
+    </insert>
+
+    <update id="updateLingdocFormTask" parameterType="com.ruoyi.system.domain.lingdoc.LingdocFormTask">
+        update lingdoc_form_task
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="userId != null">user_id = #{userId},</if>
+            <if test="taskName != null">task_name = #{taskName},</if>
+            <if test="originalFileId != null">original_file_id = #{originalFileId},</if>
+            <if test="originalFileUrl != null">original_file_url = #{originalFileUrl},</if>
+            <if test="originalFileName != null">original_file_name = #{originalFileName},</if>
+            <if test="filledFileId != null">filled_file_id = #{filledFileId},</if>
+            <if test="filledFileUrl != null">filled_file_url = #{filledFileUrl},</if>
+            <if test="filledFileName != null">filled_file_name = #{filledFileName},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="aiResult != null">ai_result = #{aiResult},</if>
+            <if test="fieldCount != null">field_count = #{fieldCount},</if>
+            <if test="confirmedCount != null">confirmed_count = #{confirmedCount},</if>
+            <if test="tokenCost != null">token_cost = #{tokenCost},</if>
+            <if test="errorMsg != null">error_msg = #{errorMsg},</if>
+            <if test="createBy != null">create_by = #{createBy},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            <if test="remark != null">remark = #{remark},</if>
+        </trim>
+        where task_id = #{taskId}
+    </update>
+
+    <delete id="deleteLingdocFormTaskById" parameterType="String">
+        delete from lingdoc_form_task where task_id = #{taskId}
+    </delete>
+
+    <delete id="deleteLingdocFormTaskByIds" parameterType="String">
+        delete from lingdoc_form_task where task_id in 
+        <foreach collection="array" item="taskId" open="(" separator="," close=")">
+            #{taskId}
+        </foreach>
+    </delete>
+</mapper>

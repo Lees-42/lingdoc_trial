@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.system.mapper.lingdoc.LingdocFileVersionMapper">
+
+    <resultMap type="com.ruoyi.system.domain.lingdoc.LingdocFileVersion" id="LingdocFileVersionResult">
+        <result property="versionId" column="version_id"/>
+        <result property="fileId" column="file_id"/>
+        <result property="versionNo" column="version_no"/>
+        <result property="snapshotPath" column="snapshot_path"/>
+        <result property="snapshotSize" column="snapshot_size"/>
+        <result property="operationType" column="operation_type"/>
+        <result property="checksum" column="checksum"/>
+        <result property="operatorId" column="operator_id"/>
+        <result property="createTime" column="create_time"/>
+    </resultMap>
+
+    <sql id="selectLingdocFileVersionVo">
+        select version_id, file_id, version_no, snapshot_path, snapshot_size, operation_type, checksum, operator_id, create_time
+        from lingdoc_file_version
+    </sql>
+
+    <select id="selectLingdocFileVersionById" parameterType="String" resultMap="LingdocFileVersionResult">
+        <include refid="selectLingdocFileVersionVo"/>
+        where version_id = #{versionId}
+    </select>
+
+    <select id="selectLingdocFileVersionList" parameterType="com.ruoyi.system.domain.lingdoc.LingdocFileVersion" resultMap="LingdocFileVersionResult">
+        <include refid="selectLingdocFileVersionVo"/>
+        <where>
+            <if test="fileId != null and fileId != ''"> and file_id = #{fileId}</if>
+            <if test="versionNo != null"> and version_no = #{versionNo}</if>
+            <if test="operationType != null and operationType != ''"> and operation_type = #{operationType}</if>
+            <if test="checksum != null and checksum != ''"> and checksum = #{checksum}</if>
+            <if test="operatorId != null"> and operator_id = #{operatorId}</if>
+        </where>
+        order by version_no desc
+    </select>
+
+    <select id="selectMaxVersionNoByFileId" parameterType="String" resultType="Integer">
+        select max(version_no) from lingdoc_file_version where file_id = #{fileId}
+    </select>
+
+    <insert id="insertLingdocFileVersion" parameterType="com.ruoyi.system.domain.lingdoc.LingdocFileVersion">
+        insert into lingdoc_file_version
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="versionId != null">version_id,</if>
+            <if test="fileId != null">file_id,</if>
+            <if test="versionNo != null">version_no,</if>
+            <if test="snapshotPath != null">snapshot_path,</if>
+            <if test="snapshotSize != null">snapshot_size,</if>
+            <if test="operationType != null">operation_type,</if>
+            <if test="checksum != null">checksum,</if>
+            <if test="operatorId != null">operator_id,</if>
+            <if test="createTime != null">create_time,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="versionId != null">#{versionId},</if>
+            <if test="fileId != null">#{fileId},</if>
+            <if test="versionNo != null">#{versionNo},</if>
+            <if test="snapshotPath != null">#{snapshotPath},</if>
+            <if test="snapshotSize != null">#{snapshotSize},</if>
+            <if test="operationType != null">#{operationType},</if>
+            <if test="checksum != null">#{checksum},</if>
+            <if test="operatorId != null">#{operatorId},</if>
+            <if test="createTime != null">#{createTime},</if>
+        </trim>
+    </insert>
+
+    <update id="updateLingdocFileVersion" parameterType="com.ruoyi.system.domain.lingdoc.LingdocFileVersion">
+        update lingdoc_file_version
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="fileId != null">file_id = #{fileId},</if>
+            <if test="versionNo != null">version_no = #{versionNo},</if>
+            <if test="snapshotPath != null">snapshot_path = #{snapshotPath},</if>
+            <if test="snapshotSize != null">snapshot_size = #{snapshotSize},</if>
+            <if test="operationType != null">operation_type = #{operationType},</if>
+            <if test="checksum != null">checksum = #{checksum},</if>
+            <if test="operatorId != null">operator_id = #{operatorId},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+        </trim>
+        where version_id = #{versionId}
+    </update>
+
+    <delete id="deleteLingdocFileVersionById" parameterType="String">
+        delete from lingdoc_file_version where version_id = #{versionId}
+    </delete>
+
+    <delete id="deleteLingdocFileVersionByFileId" parameterType="String">
+        delete from lingdoc_file_version where file_id = #{fileId}
+    </delete>
+
+    <delete id="deleteLingdocFileVersionByIds" parameterType="String">
+        delete from lingdoc_file_version where version_id in
+        <foreach collection="array" item="versionId" open="(" separator="," close=")">
+            #{versionId}
+        </foreach>
+    </delete>
+
+</mapper>

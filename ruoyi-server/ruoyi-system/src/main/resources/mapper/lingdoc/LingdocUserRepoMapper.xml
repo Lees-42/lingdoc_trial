@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.system.mapper.lingdoc.LingdocUserRepoMapper">
+
+    <resultMap type="com.ruoyi.system.domain.lingdoc.LingdocUserRepo" id="LingdocUserRepoResult">
+        <result property="repoId"     column="repo_id"/>
+        <result property="userId"     column="user_id"/>
+        <result property="repoPath"   column="repo_path"/>
+        <result property="repoName"   column="repo_name"/>
+        <result property="isDefault"  column="is_default"/>
+        <result property="isActive"   column="is_active"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="remark"     column="remark"/>
+    </resultMap>
+
+    <sql id="selectLingdocUserRepoVo">
+        select repo_id, user_id, repo_path, repo_name, is_default, is_active, create_time, update_time, remark
+        from lingdoc_user_repo
+    </sql>
+
+    <select id="selectByUserId" parameterType="Long" resultMap="LingdocUserRepoResult">
+        <include refid="selectLingdocUserRepoVo"/>
+        where user_id = #{userId}
+        order by is_default desc, create_time asc
+    </select>
+
+    <select id="selectDefaultByUserId" parameterType="Long" resultMap="LingdocUserRepoResult">
+        <include refid="selectLingdocUserRepoVo"/>
+        where user_id = #{userId} and is_default = '1'
+        limit 1
+    </select>
+
+    <select id="selectByRepoId" parameterType="String" resultMap="LingdocUserRepoResult">
+        <include refid="selectLingdocUserRepoVo"/>
+        where repo_id = #{repoId}
+    </select>
+
+    <insert id="insert" parameterType="com.ruoyi.system.domain.lingdoc.LingdocUserRepo">
+        insert into lingdoc_user_repo
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="repoId != null">repo_id,</if>
+            <if test="userId != null">user_id,</if>
+            <if test="repoPath != null">repo_path,</if>
+            <if test="repoName != null">repo_name,</if>
+            <if test="isDefault != null">is_default,</if>
+            <if test="isActive != null">is_active,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateTime != null">update_time,</if>
+            <if test="remark != null">remark,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="repoId != null">#{repoId},</if>
+            <if test="userId != null">#{userId},</if>
+            <if test="repoPath != null">#{repoPath},</if>
+            <if test="repoName != null">#{repoName},</if>
+            <if test="isDefault != null">#{isDefault},</if>
+            <if test="isActive != null">#{isActive},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+            <if test="remark != null">#{remark},</if>
+        </trim>
+    </insert>
+
+    <update id="updateRepoPath">
+        update lingdoc_user_repo
+        set repo_path = #{repoPath},
+            update_time = now()
+        where repo_id = #{repoId}
+    </update>
+
+    <update id="updateDefaultByRepoId">
+        update lingdoc_user_repo
+        set is_default = #{isDefault},
+            update_time = now()
+        where repo_id = #{repoId}
+    </update>
+
+    <update id="clearDefaultByUserId">
+        update lingdoc_user_repo
+        set is_default = '0',
+            update_time = now()
+        where user_id = #{userId}
+    </update>
+
+    <delete id="deleteByRepoId" parameterType="String">
+        delete from lingdoc_user_repo where repo_id = #{repoId}
+    </delete>
+
+    <delete id="deleteByUserId" parameterType="Long">
+        delete from lingdoc_user_repo where user_id = #{userId}
+    </delete>
+
+</mapper>

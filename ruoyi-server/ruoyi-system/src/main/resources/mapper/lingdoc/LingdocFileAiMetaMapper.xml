@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.system.mapper.lingdoc.LingdocFileAiMetaMapper">
+
+    <resultMap type="com.ruoyi.system.domain.lingdoc.LingdocFileAiMeta" id="LingdocFileAiMetaResult">
+        <result property="fileId" column="file_id"/>
+        <result property="kbId" column="kb_id"/>
+        <result property="parseStatus" column="parse_status"/>
+        <result property="parseError" column="parse_error"/>
+        <result property="chunkCount" column="chunk_count"/>
+        <result property="embeddingStatus" column="embedding_status"/>
+        <result property="summary" column="summary"/>
+        <result property="keywords" column="keywords"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+    </resultMap>
+
+    <sql id="selectLingdocFileAiMetaVo">
+        select file_id, kb_id, parse_status, parse_error, chunk_count, embedding_status, summary, keywords, create_time, update_time
+        from lingdoc_file_ai_meta
+    </sql>
+
+    <select id="selectLingdocFileAiMetaById" parameterType="String" resultMap="LingdocFileAiMetaResult">
+        <include refid="selectLingdocFileAiMetaVo"/>
+        where file_id = #{fileId}
+    </select>
+
+    <select id="selectLingdocFileAiMetaList" parameterType="com.ruoyi.system.domain.lingdoc.LingdocFileAiMeta" resultMap="LingdocFileAiMetaResult">
+        <include refid="selectLingdocFileAiMetaVo"/>
+        <where>
+            <if test="kbId != null and kbId != ''"> and kb_id = #{kbId}</if>
+            <if test="parseStatus != null and parseStatus != ''"> and parse_status = #{parseStatus}</if>
+            <if test="embeddingStatus != null and embeddingStatus != ''"> and embedding_status = #{embeddingStatus}</if>
+            <if test="summary != null and summary != ''"> and summary like concat('%', #{summary}, '%')</if>
+        </where>
+        order by create_time desc
+    </select>
+
+    <insert id="insertLingdocFileAiMeta" parameterType="com.ruoyi.system.domain.lingdoc.LingdocFileAiMeta">
+        insert into lingdoc_file_ai_meta
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="fileId != null">file_id,</if>
+            <if test="kbId != null">kb_id,</if>
+            <if test="parseStatus != null">parse_status,</if>
+            <if test="parseError != null">parse_error,</if>
+            <if test="chunkCount != null">chunk_count,</if>
+            <if test="embeddingStatus != null">embedding_status,</if>
+            <if test="summary != null">summary,</if>
+            <if test="keywords != null">keywords,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateTime != null">update_time,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="fileId != null">#{fileId},</if>
+            <if test="kbId != null">#{kbId},</if>
+            <if test="parseStatus != null">#{parseStatus},</if>
+            <if test="parseError != null">#{parseError},</if>
+            <if test="chunkCount != null">#{chunkCount},</if>
+            <if test="embeddingStatus != null">#{embeddingStatus},</if>
+            <if test="summary != null">#{summary},</if>
+            <if test="keywords != null">#{keywords},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+        </trim>
+    </insert>
+
+    <update id="updateLingdocFileAiMeta" parameterType="com.ruoyi.system.domain.lingdoc.LingdocFileAiMeta">
+        update lingdoc_file_ai_meta
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="kbId != null">kb_id = #{kbId},</if>
+            <if test="parseStatus != null">parse_status = #{parseStatus},</if>
+            <if test="parseError != null">parse_error = #{parseError},</if>
+            <if test="chunkCount != null">chunk_count = #{chunkCount},</if>
+            <if test="embeddingStatus != null">embedding_status = #{embeddingStatus},</if>
+            <if test="summary != null">summary = #{summary},</if>
+            <if test="keywords != null">keywords = #{keywords},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+        </trim>
+        where file_id = #{fileId}
+    </update>
+
+    <delete id="deleteLingdocFileAiMetaById" parameterType="String">
+        delete from lingdoc_file_ai_meta where file_id = #{fileId}
+    </delete>
+
+    <delete id="deleteLingdocFileAiMetaByIds" parameterType="String">
+        delete from lingdoc_file_ai_meta where file_id in
+        <foreach collection="array" item="fileId" open="(" separator="," close=")">
+            #{fileId}
+        </foreach>
+    </delete>
+
+</mapper>
