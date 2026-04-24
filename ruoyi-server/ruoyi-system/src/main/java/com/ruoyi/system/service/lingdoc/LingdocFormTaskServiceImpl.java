@@ -1,6 +1,8 @@
 package com.ruoyi.system.service.lingdoc;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
@@ -9,10 +11,21 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import org.apache.poi.xssf.usermodel.XSSFCell;
+import org.apache.poi.xssf.usermodel.XSSFRow;
+import org.apache.poi.xssf.usermodel.XSSFSheet;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.apache.poi.xwpf.usermodel.XWPFDocument;
+import org.apache.poi.xwpf.usermodel.XWPFParagraph;
+import org.apache.poi.xwpf.usermodel.XWPFRun;
+import org.apache.poi.xwpf.usermodel.XWPFTable;
+import org.apache.poi.xwpf.usermodel.XWPFTableCell;
+import org.apache.poi.xwpf.usermodel.XWPFTableRow;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTP;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -313,28 +326,38 @@ public class LingdocFormTaskServiceImpl implements ILingdocFormTaskService
         }
         else
         {
-            // 方式 B 兜底：后端根据 filledValues 本地渲染（仅 HTML 支持）
+            // 方式 B：后端根据 filledValues 本地渲染
             String ext = "";
             if (StringUtils.isNotEmpty(originalFileName) && originalFileName.lastIndexOf(".") > 0)
             {
                 ext = originalFileName.substring(originalFileName.lastIndexOf(".") + 1).toLowerCase();
             }
 
-            if ("html".equals(ext) || "htm".equals(ext))
+            switch (ext)
             {
-                renderHtml(originalPath, filledPath, result.getFilledValues());
-            }
-            else
-            {
-                // 非 HTML 且 AI 未返回文件：复制原文件（未填写）
-                try
-                {
-                    org.apache.commons.io.FileUtils.copyFile(new File(originalPath), new File(filledPath));
-                }
-                catch (IOException e)
-                {
-                    throw new RuntimeException("复制文件失败：" + e.getMessage(), e);
-                }
+                case "html":
+                case "htm":
+                    renderHtml(originalPath, filledPath, result.getFilledValues());
+                    break;
+                case "docx":
+                    renderDocx(originalPath, filledPath, result.getFilledValues());
+                    break;
+                case "xlsx":
+                case "xls":
+                    renderXlsx(originalPath, filledPath, result.getFilledValues());
+                    break;
+                default:
+                    // 未支持格式：复制原文件并记录日志
+                    log.warn("不支持的文件格式进行本地渲染: ext={}, 仅复制原文件", ext);
+                    try
+                    {
+                        org.apache.commons.io.FileUtils.copyFile(new File(originalPath), new File(filledPath));
+                    }
+                    catch (IOException e)
+                    {
+                        throw new RuntimeException("复制文件失败：" + e.getMessage(), e);
+                    }
+                    break;
             }
         }
 
@@ -393,6 +416,149 @@ public class LingdocFormTaskServiceImpl implements ILingdocFormTaskService
         {
             throw new RuntimeException("HTML 渲染失败：" + e.getMessage(), e);
         }
+    }
+
+    /**
+     * Word (docx) 渲染：将 {{字段名}} 占位符替换为实际值
+     * <p>
+     * 模板中需要填写值的位置请使用占位符格式：{{字段名}}
+     * 例如：姓名：{{姓名}}  或  单元格内直接写 {{姓名}}
+     */
+    private void renderDocx(String originalPath, String filledPath, Map<String, String> filledValues)
+    {
+        try (FileInputStream fis = new FileInputStream(originalPath);
+             XWPFDocument doc = new XWPFDocument(fis);
+             FileOutputStream fos = new FileOutputStream(filledPath))
+        {
+            int replaceCount = 0;
+
+            // 1. 处理所有段落中的占位符
+            for (XWPFParagraph para : doc.getParagraphs())
+            {
+                replaceCount += replaceInParagraph(para, filledValues);
+            }
+
+            // 2. 处理所有表格中的占位符
+            for (XWPFTable table : doc.getTables())
+            {
+                for (XWPFTableRow row : table.getRows())
+                {
+                    for (XWPFTableCell cell : row.getTableCells())
+                    {
+                        for (XWPFParagraph para : cell.getParagraphs())
+                        {
+                            replaceCount += replaceInParagraph(para, filledValues);
+                        }
+                    }
+                }
+            }
+
+            doc.write(fos);
+            log.info("DOCX 渲染完成, path={}, 替换了 {} 处占位符", filledPath, replaceCount);
+        }
+        catch (IOException e)
+        {
+            throw new RuntimeException("DOCX 渲染失败：" + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Excel (xlsx) 渲染：将 {{字段名}} 占位符替换为实际值
+     * <p>
+     * 模板中需要填写值的位置请使用占位符格式：{{字段名}}
+     */
+    private void renderXlsx(String originalPath, String filledPath, Map<String, String> filledValues)
+    {
+        try (FileInputStream fis = new FileInputStream(originalPath);
+             XSSFWorkbook wb = new XSSFWorkbook(fis);
+             FileOutputStream fos = new FileOutputStream(filledPath))
+        {
+            int replaceCount = 0;
+
+            for (int i = 0; i < wb.getNumberOfSheets(); i++)
+            {
+                XSSFSheet sheet = wb.getSheetAt(i);
+                for (XSSFRow row : sheet)
+                {
+                    if (row == null) continue;
+                    for (XSSFCell cell : row)
+                    {
+                        if (cell == null) continue;
+                        String cellValue = cell.getStringCellValue();
+                        if (StringUtils.isEmpty(cellValue)) continue;
+
+                        String newValue = replacePlaceholders(cellValue, filledValues);
+                        if (!cellValue.equals(newValue))
+                        {
+                            cell.setCellValue(newValue);
+                            replaceCount++;
+                        }
+                    }
+                }
+            }
+
+            wb.write(fos);
+            log.info("XLSX 渲染完成, path={}, 替换了 {} 处占位符", filledPath, replaceCount);
+        }
+        catch (IOException e)
+        {
+            throw new RuntimeException("XLSX 渲染失败：" + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 在 Word 段落中替换占位符
+     * <p>
+     * 策略：获取段落完整文本 → 替换占位符 → 如果变化则清空段落并重新写入
+     */
+    private int replaceInParagraph(XWPFParagraph para, Map<String, String> filledValues)
+    {
+        String fullText = para.getText();
+        if (StringUtils.isEmpty(fullText))
+        {
+            return 0;
+        }
+
+        String newText = replacePlaceholders(fullText, filledValues);
+        if (fullText.equals(newText))
+        {
+            return 0;
+        }
+
+        // 清空所有 Run
+        for (int i = para.getRuns().size() - 1; i >= 0; i--)
+        {
+            para.removeRun(i);
+        }
+
+        // 重新写入文本
+        XWPFRun run = para.createRun();
+        run.setText(newText);
+
+        return 1;
+    }
+
+    /**
+     * 通用占位符替换
+     * <p>
+     * 占位符格式：{{字段名}}
+     * 如果 filledValues 中找不到对应字段，保留原占位符
+     */
+    private String replacePlaceholders(String text, Map<String, String> filledValues)
+    {
+        if (StringUtils.isEmpty(text) || filledValues == null || filledValues.isEmpty())
+        {
+            return text;
+        }
+
+        String result = text;
+        for (Map.Entry<String, String> entry : filledValues.entrySet())
+        {
+            String placeholder = "{{" + entry.getKey() + "}}";
+            String value = entry.getValue() != null ? entry.getValue() : "";
+            result = result.replace(placeholder, value);
+        }
+        return result;
     }
 
     /**
