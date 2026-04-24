@@ -33,6 +33,7 @@
           :tree-data="state.treeData"
           :loading="state.treeLoading"
           @node-click="handleTreeNodeClick"
+          @delete-folder="handleDeleteFolder"
         />
         <VaultFileList
           :file-list="state.fileList"
@@ -131,6 +132,7 @@
 
 <script setup>
 import { reactive, ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { UploadFilled } from '@element-plus/icons-vue'
 import {
@@ -147,7 +149,8 @@ import {
   createVaultFolder,
   getVaultRepo,
   uploadVaultFile,
-  listVaultRepos
+  listVaultRepos,
+  deleteFolder
 } from '@/api/lingdoc/vault'
 import { getFileTags, getFolderTags } from '@/api/lingdoc/tag'
 import useVaultStore from '@/store/modules/vault'
@@ -461,6 +464,34 @@ async function handleDelete(file) {
   }
 }
 
+/** 删除文件夹 */
+async function handleDeleteFolder(folder) {
+  try {
+    await ElMessageBox.confirm(
+      `确定要删除文件夹 "${folder.label}" 及其所有内容吗？此操作不可恢复！`,
+      '警告',
+      {
+        confirmButtonText: '确定删除',
+        cancelButtonText: '取消',
+        type: 'warning',
+        confirmButtonClass: 'el-button--danger'
+      }
+    )
+    await deleteFolder(folder.value)
+    ElMessage.success('文件夹删除成功')
+    if (state.currentFolder && state.currentFolder.value === folder.value) {
+      state.currentFolder = state.treeData[0]
+      state.currentSubPath = ''
+    }
+    await loadTree()
+    await loadFiles()
+  } catch (e) {
+    if (e !== 'cancel') {
+      ElMessage.error('删除文件夹失败: ' + (e.message || e))
+    }
+  }
+}
+
 /** 下载 */
 async function handleDownload(file) {
   try {
@@ -476,10 +507,11 @@ async function handleDownload(file) {
   }
 }
 
-/** 打开上传弹窗 */
+const router = useRouter()
+
+/** 跳转到文档上传页面 */
 function openUploadDialog() {
-  state.uploadTargetPath = state.selectedNode?.value || ''
-  state.uploadDialogVisible = true
+  router.push('/lingdoc/file-upload')
 }
 
 /** 上传文件变更回调 */

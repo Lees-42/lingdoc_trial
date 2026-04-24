@@ -103,6 +103,15 @@ public interface ILingdocVaultService
     public int deleteLingdocFileIndexByIds(String[] fileIds, Long userId) throws IOException;
 
     /**
+     * 删除文件夹（递归删除物理目录及数据库索引）
+     * 
+     * @param subPath 子路径
+     * @param userId 用户ID
+     * @return 删除的文件数量
+     */
+    public int deleteFolder(String subPath, Long userId) throws IOException;
+
+    /**
      * 新建文件夹
      * 
      * @param subPath 子路径

@@ -87,4 +87,10 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         </foreach>
     </delete>
 
+    <delete id="deleteByTargetPathPrefix">
+        delete from lingdoc_tag_binding
+        where target_type = #{targetType}
+          and (target_id = #{targetIdPrefix} or target_id like #{targetIdPrefix} || '/%')
+    </delete>
+
 </mapper>

@@ -14,7 +14,7 @@ WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE menu_id = '2000');
 UPDATE sys_menu SET parent_id = '2000' WHERE menu_id IN ('2001', '2002', '2003', '2004', '2005');
 
 -- 3. 将五个功能菜单的 path 改为相对路径（去掉 lingdoc/ 前缀）
-UPDATE sys_menu SET path = 'upload', component = 'lingdoc/upload/index', menu_name = '文档上传', perms = 'lingdoc:upload:list', remark = '文档上传菜单' WHERE menu_id = '2001';
+UPDATE sys_menu SET path = 'file-upload', component = 'lingdoc/file-upload/index', menu_name = '文件上传', perms = 'lingdoc:upload:list', remark = '文件上传菜单' WHERE menu_id = '2001';
 UPDATE sys_menu SET path = 'agent', component = 'lingdoc/search/index', menu_name = '智能检索', perms = 'lingdoc:search:list', remark = '文档搜索菜单' WHERE menu_id = '2002';
 UPDATE sys_menu SET path = 'version', component = 'lingdoc/version/index', menu_name = '版本管理', perms = 'lingdoc:version:list', remark = '版本管理菜单' WHERE menu_id = '2003';
 UPDATE sys_menu SET path = 'form', component = 'lingdoc/form/index', menu_name = '表格填写', perms = 'lingdoc:form:list', remark = '表单管理菜单' WHERE menu_id = '2004';

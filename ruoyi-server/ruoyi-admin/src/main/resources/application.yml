@@ -36,6 +36,8 @@ logging:
   level:
     "[com.ruoyi]": debug
     "[org.springframework]": warn
+  charset:
+    console: UTF-8
 
 # 用户配置
 user:
@@ -140,6 +142,33 @@ referer:
   enabled: false
   # 允许的域名列表
   allowed-domains: localhost,127.0.0.1,ruoyi.vip,www.ruoyi.vip
+
+# Dify AI 配置
+lingdoc:
+  ai:
+    dify:
+      enabled: true
+      default-workflow: organize
+      # 向后兼容：顶层配置作为 default Workflow（organize）的 fallback
+      base-url: http://localhost/v1
+      api-key: ${DIFY_API_KEY:app-WIGw2CnztlO3zhRg6kDrdkHp}
+      timeout:
+        connect: 10000    # 连接超时 10s
+        read: 30000       # 读取超时 30s
+      # 多 Workflow 配置：新增 Workflow 只需在此添加
+      workflows:
+        form-extract:
+          base-url: http://localhost/v1
+          api-key: ${DIFY_FORM_EXTRACT_KEY:app-YOUR_FORM_EXTRACT_KEY}
+          timeout:
+            connect: 10000
+            read: 30000
+        form-generate:
+          base-url: http://localhost/v1
+          api-key: ${DIFY_FORM_GENERATE_KEY:app-YOUR_FORM_GENERATE_KEY}
+          timeout:
+            connect: 10000
+            read: 60000     # 文档生成可能更慢
 
 # 防止XSS攻击
 xss:

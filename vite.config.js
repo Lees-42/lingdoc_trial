@@ -42,7 +42,7 @@ export default defineConfig(({ mode, command }) => {
     },
     // 配置 Vite 开发服务器
     server: {
-      port: 80,
+      port: 3000,
       host: true, // 允许外部访问
       open: true, // 自动打开浏览器
       server: {

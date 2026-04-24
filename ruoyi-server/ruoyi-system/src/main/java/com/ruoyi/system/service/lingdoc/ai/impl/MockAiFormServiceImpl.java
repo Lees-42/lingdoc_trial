@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
 import com.ruoyi.system.domain.lingdoc.LingdocFormField;
 import com.ruoyi.system.domain.lingdoc.ai.AiExtractResult;
@@ -20,7 +19,6 @@ import com.ruoyi.system.service.lingdoc.ai.IAiFormService;
  * @author lingdoc
  */
 @Service
-@Primary
 public class MockAiFormServiceImpl implements IAiFormService
 {
     /**

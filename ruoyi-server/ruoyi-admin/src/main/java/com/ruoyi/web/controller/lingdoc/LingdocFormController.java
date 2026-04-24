@@ -30,6 +30,7 @@ import com.ruoyi.common.utils.file.FileUtils;
 import com.ruoyi.common.utils.uuid.UUID;
 import com.ruoyi.system.domain.lingdoc.LingdocFileIndex;
 import com.ruoyi.system.domain.lingdoc.LingdocFormField;
+import com.ruoyi.system.domain.lingdoc.FormFieldUpdateRequest;
 import com.ruoyi.system.domain.lingdoc.LingdocFormReference;
 import com.ruoyi.system.domain.lingdoc.LingdocFormTask;
 import com.ruoyi.system.mapper.lingdoc.LingdocFileIndexMapper;
@@ -163,9 +164,9 @@ public class LingdocFormController extends BaseController
     @PreAuthorize("@ss.hasPermi('lingdoc:form:edit')")
     @Log(title = "表格填写助手", businessType = BusinessType.UPDATE)
     @PutMapping("/fields")
-    public AjaxResult updateFields(@RequestBody List<LingdocFormField> fields)
+    public AjaxResult updateFields(@RequestBody FormFieldUpdateRequest request)
     {
-        int count = formTaskService.batchUpdateFormFields(fields);
+        int count = formTaskService.batchUpdateFormFields(request.getFields());
         return AjaxResult.success("更新成功").put("updatedCount", count);
     }
 

@@ -333,6 +333,56 @@ public class LingdocVaultServiceImpl implements ILingdocVaultService
     }
 
     @Override
+    @Transactional
+    public int deleteFolder(String subPath, Long userId) throws IOException
+    {
+        if (StringUtils.isEmpty(subPath) || "/".equals(subPath))
+        {
+            throw new RuntimeException("不允许删除根目录");
+        }
+
+        String vaultRoot = userRepoService.getUserRepoPath(userId);
+        Path folderPath = Paths.get(vaultRoot, "documents", subPath);
+
+        // 1. 删除物理目录（递归）
+        if (Files.exists(folderPath))
+        {
+            Files.walk(folderPath)
+                .sorted((a, b) -> -a.compareTo(b))
+                .forEach(p -> {
+                    try
+                    {
+                        Files.deleteIfExists(p);
+                    }
+                    catch (IOException e)
+                    {
+                        log.warn("删除物理文件失败: {}", p, e);
+                    }
+                });
+        }
+
+        // 2. 查询该目录及子目录下的所有文件
+        List<LingdocFileIndex> files = fileIndexMapper.selectBySubPathPrefix(userId, subPath);
+
+        // 3. 级联删除每个文件的关联数据
+        for (LingdocFileIndex file : files)
+        {
+            String fileId = file.getFileId();
+            fileVersionMapper.deleteLingdocFileVersionByFileId(fileId);
+            fileAiMetaMapper.deleteLingdocFileAiMetaById(fileId);
+            desensitizedFileMapper.deleteLingdocDesensitizedFileByFileId(fileId);
+            tagService.deleteLingdocTagBindingByTarget("F", fileId);
+            fileIndexMapper.deleteLingdocFileIndexById(fileId);
+        }
+
+        // 4. 删除该目录及子目录的标签绑定
+        tagBindingMapper.deleteByTargetPathPrefix("D", subPath);
+
+        log.info("删除文件夹完成: {}, 共删除 {} 个文件", subPath, files.size());
+        return files.size();
+    }
+
+    @Override
     public int createFolder(String subPath, Long userId)
     {
         String vaultRoot = userRepoService.getUserRepoPath(userId);

@@ -10,7 +10,9 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,13 +22,16 @@ import org.springframework.web.multipart.MultipartFile;
 import com.ruoyi.common.utils.StringUtils;
 import com.ruoyi.common.utils.file.FileUploadUtils;
 import com.ruoyi.common.utils.file.FileUtils;
+import com.ruoyi.common.utils.file.MimeTypeUtils;
 import com.ruoyi.common.utils.uuid.UUID;
 import com.ruoyi.system.domain.lingdoc.LingdocFileIndex;
 import com.ruoyi.system.domain.lingdoc.LingdocInbox;
+import com.ruoyi.system.domain.lingdoc.LingdocTag;
 import com.ruoyi.system.domain.lingdoc.LingdocTagBinding;
 import com.ruoyi.system.domain.lingdoc.LingdocUploadConfirmRequest;
 import com.ruoyi.system.mapper.lingdoc.LingdocFileIndexMapper;
 import com.ruoyi.system.mapper.lingdoc.LingdocInboxMapper;
+import com.ruoyi.system.mapper.lingdoc.LingdocTagMapper;
 import com.ruoyi.system.service.lingdoc.ai.IAiOrganizeService;
 import com.ruoyi.system.service.lingdoc.ai.result.AiOrganizeResult;
 import com.ruoyi.system.service.lingdoc.ai.result.AiTagSuggestion;
@@ -52,6 +57,9 @@ public class LingdocInboxServiceImpl implements ILingdocInboxService
 
     @Autowired
     private ILingdocTagService tagService;
+
+    @Autowired
+    private LingdocTagMapper tagMapper;
 
     @Autowired
     private IAiOrganizeService aiOrganizeService;
@@ -82,9 +90,22 @@ public class LingdocInboxServiceImpl implements ILingdocInboxService
             Files.createDirectories(inboxDir);
         }
 
-        // 使用 FileUploadUtils 保存（生成带日期前缀的唯一文件名）
-        String savedFileName = FileUploadUtils.upload(inboxDir.toString(), file);
-        Path absPath = inboxDir.resolve(savedFileName);
+        // 自主生成文件名并保存，避免 FileUploadUtils.upload() 返回 URL 风格路径
+        // 导致 Windows 下 Paths.resolve() 解析错误
+        String fileName;
+        try
+        {
+            FileUploadUtils.assertAllowed(file, MimeTypeUtils.DEFAULT_ALLOWED_EXTENSION);
+            fileName = FileUploadUtils.extractFilename(file);
+        }
+        catch (Exception e)
+        {
+            throw new IOException(e.getMessage(), e);
+        }
+        String localFileName = fileName.replace("/", File.separator);
+        Path destPath = inboxDir.resolve(localFileName);
+        Files.createDirectories(destPath.getParent());
+        file.transferTo(destPath);
 
         LingdocInbox inbox = new LingdocInbox();
         inbox.setInboxId(UUID.fastUUID().toString());
@@ -92,7 +113,7 @@ public class LingdocInboxServiceImpl implements ILingdocInboxService
         inbox.setOriginalName(file.getOriginalFilename());
         inbox.setFileType(getExtension(file.getOriginalFilename()));
         inbox.setFileSize(file.getSize());
-        inbox.setAbsPath(absPath.toString());
+        inbox.setAbsPath(destPath.toAbsolutePath().toString());
         inbox.setStatus("uploaded");
         inboxMapper.insert(inbox);
 
@@ -150,6 +171,21 @@ public class LingdocInboxServiceImpl implements ILingdocInboxService
             {
                 List<String> tagIds = resolveTagIds(result.getTags());
                 inbox.setTagIds(String.join(",", tagIds));
+                // 将标签详情放入 params，供前端直接显示（避免新标签不在 allTags 缓存中）
+                List<Map<String, Object>> tagDetails = new ArrayList<>();
+                for (String tagId : tagIds)
+                {
+                    LingdocTag tag = tagMapper.selectLingdocTagById(tagId);
+                    if (tag != null)
+                    {
+                        Map<String, Object> item = new HashMap<>();
+                        item.put("tagId", tag.getTagId());
+                        item.put("tagName", tag.getTagName());
+                        item.put("tagColor", tag.getTagColor());
+                        tagDetails.add(item);
+                    }
+                }
+                inbox.getParams().put("tags", tagDetails);
             }
 
             inbox.setAiSummary(result.getSummary());
@@ -338,8 +374,27 @@ public class LingdocInboxServiceImpl implements ILingdocInboxService
         List<String> tagIds = new ArrayList<>();
         for (AiTagSuggestion s : suggestions)
         {
-            // TODO: 根据 tagName 查询系统中是否已有该标签
-            // 若有则取 tagId，若无则跳过（或自动创建）
+            if (StringUtils.isEmpty(s.getTagName()))
+            {
+                continue;
+            }
+            String tagName = s.getTagName().trim();
+            LingdocTag existing = tagMapper.selectLingdocTagByName(tagName);
+            if (existing != null)
+            {
+                tagIds.add(existing.getTagId());
+            }
+            else
+            {
+                LingdocTag newTag = new LingdocTag();
+                newTag.setTagId(UUID.fastUUID().toString());
+                newTag.setTagName(tagName);
+                newTag.setTagColor(StringUtils.isNotEmpty(s.getTagColor()) ? s.getTagColor() : "#409EFF");
+                newTag.setTagScope("A");
+                tagMapper.insertLingdocTag(newTag);
+                tagIds.add(newTag.getTagId());
+                log.info("AI 规整自动创建标签: {} ({})", tagName, newTag.getTagId());
+            }
         }
         return tagIds;
     }

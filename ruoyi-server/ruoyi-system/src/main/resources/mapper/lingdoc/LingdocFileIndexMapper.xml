@@ -69,6 +69,12 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         having count(*) > 1
     </select>
 
+    <select id="selectBySubPathPrefix" resultMap="LingdocFileIndexResult">
+        <include refid="selectLingdocFileIndexVo"/>
+        where user_id = #{userId}
+          and (sub_path = #{subPath} or sub_path like #{subPath} || '/%')
+    </select>
+
     <insert id="insertLingdocFileIndex" parameterType="com.ruoyi.system.domain.lingdoc.LingdocFileIndex">
         insert into lingdoc_file_index
         <trim prefix="(" suffix=")" suffixOverrides=",">

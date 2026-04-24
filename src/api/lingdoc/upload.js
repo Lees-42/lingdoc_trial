@@ -20,7 +20,8 @@ export function uploadFile(data) {
     method: 'post',
     data: data,
     headers: {
-      'Content-Type': 'multipart/form-data'
+      'Content-Type': 'multipart/form-data',
+      'repeatSubmit': false
     },
     timeout: 60000
   })
@@ -41,7 +42,8 @@ export function organizeUpload(fileId) {
   return request({
     url: '/lingdoc/upload/organize',
     method: 'post',
-    data: { fileId }
+    data: { fileId },
+    timeout: 60000
   })
 }
 
@@ -51,7 +53,8 @@ export function batchOrganizeUpload(fileIds) {
   return request({
     url: '/lingdoc/upload/batchOrganize',
     method: 'post',
-    data: fileIds
+    data: fileIds,
+    timeout: 60000
   })
 }
 

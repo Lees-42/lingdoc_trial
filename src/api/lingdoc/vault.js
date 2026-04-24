@@ -89,6 +89,15 @@ export function createVaultFolder(data) {
   })
 }
 
+// 删除文件夹
+export function deleteFolder(path) {
+  return request({
+    url: '/lingdoc/vault/folder',
+    method: 'delete',
+    params: { path }
+  })
+}
+
 // 手动触发Vault扫描同步
 export function syncVault() {
   return request({

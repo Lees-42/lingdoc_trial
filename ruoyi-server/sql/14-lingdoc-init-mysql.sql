@@ -66,7 +66,7 @@ WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE menu_id = '2000');
 
 -- 功能菜单：文档上传（2001）
 INSERT INTO sys_menu (menu_id, menu_name, parent_id, order_num, path, component, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, update_by, update_time, remark)
-SELECT '2001', '文档上传', '2000', '1', 'upload', 'lingdoc/upload/index', '0', '0', 'C', '0', '0', 'lingdoc:upload:list', 'upload', 'admin', sysdate(), '', null, '文档上传菜单'
+SELECT '2001', '文件上传', '2000', '1', 'file-upload', 'lingdoc/file-upload/index', '0', '0', 'C', '0', '0', 'lingdoc:upload:list', 'upload', 'admin', sysdate(), '', null, '文件上传菜单'
 FROM DUAL
 WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE menu_id = '2001');
 

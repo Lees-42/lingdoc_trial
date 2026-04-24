@@ -369,6 +369,29 @@ public class LingdocVaultController extends BaseController
     }
 
     /**
+     * 删除文件夹（递归删除目录及文件）
+     */
+    @PreAuthorize("@ss.hasPermi('lingdoc:vault:edit')")
+    @Log(title = "Vault文件管理", businessType = BusinessType.DELETE)
+    @DeleteMapping("/folder")
+    public AjaxResult deleteFolder(@RequestParam String path)
+    {
+        try
+        {
+            int count = vaultService.deleteFolder(path, getUserId());
+            return AjaxResult.success("删除成功，共删除 " + count + " 个文件");
+        }
+        catch (RuntimeException e)
+        {
+            return AjaxResult.error(e.getMessage());
+        }
+        catch (IOException e)
+        {
+            return AjaxResult.error("删除目录失败: " + e.getMessage());
+        }
+    }
+
+    /**
      * 新建文件夹
      */
     @PreAuthorize("@ss.hasPermi('lingdoc:vault:edit')")

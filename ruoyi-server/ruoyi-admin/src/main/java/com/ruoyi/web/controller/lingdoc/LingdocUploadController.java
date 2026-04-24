@@ -171,10 +171,10 @@ public class LingdocUploadController extends BaseController
                 errors.add(req.getFileId() + ": " + e.getMessage());
             }
         }
-        AjaxResult ajax = AjaxResult.success();
-        ajax.put("success", success);
-        ajax.put("errors", errors);
-        return ajax;
+        java.util.Map<String, Object> data = new java.util.HashMap<>();
+        data.put("success", success);
+        data.put("errors", errors);
+        return AjaxResult.success(data);
     }
 
     /**

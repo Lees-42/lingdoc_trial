@@ -197,9 +197,8 @@ public class LingdocFormTaskServiceImpl implements ILingdocFormTaskService
         }
         String filePath = task.getOriginalFileUrl().replace(Constants.RESOURCE_PREFIX, RuoYiConfig.getProfile());
 
-        // 2. TODO: 调用 AI 开发者实现的识别逻辑
-        //    入参：filePath + originalFileName
-        //    出参：AiExtractResult JSON
+        // 2. 调用 Dify AI 工作流识别表格字段
+        //    由 DifyAiFormServiceImpl 实现，调用 form-extract 工作流
         AiExtractResult result = aiFormService.extract(filePath, task.getOriginalFileName());
 
         // 3. 清空该 task 已有的 fields 和 references（防重复）

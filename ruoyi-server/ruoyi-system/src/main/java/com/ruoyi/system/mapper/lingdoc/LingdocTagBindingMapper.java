@@ -75,4 +75,13 @@ public interface LingdocTagBindingMapper
      * @return 结果
      */
     public int deleteLingdocTagBindingByIds(String[] bindingIds);
+
+    /**
+     * 按目标路径前缀删除标签绑定（用于删除文件夹时级联删除目录标签）
+     * 
+     * @param targetType 目标类型
+     * @param targetIdPrefix 目标ID前缀
+     * @return 结果
+     */
+    public int deleteByTargetPathPrefix(String targetType, String targetIdPrefix);
 }

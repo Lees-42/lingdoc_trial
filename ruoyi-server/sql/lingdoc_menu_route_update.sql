@@ -36,13 +36,13 @@ UPDATE sys_menu SET parent_id = '2000' WHERE menu_id IN ('2001', '2002', '2003',
 
 -- 2001: 文档上传（原"自动规整"）
 UPDATE sys_menu SET
-  menu_name = '文档上传',
-  path = 'upload',
-  component = 'lingdoc/upload/index',
+  menu_name = '文件上传',
+  path = 'file-upload',
+  component = 'lingdoc/file-upload/index',
   perms = 'lingdoc:upload:list',
   icon = 'upload',
   order_num = '1',
-  remark = '文档上传菜单',
+  remark = '文件上传菜单',
   update_time = sysdate()
 WHERE menu_id = '2001';
 

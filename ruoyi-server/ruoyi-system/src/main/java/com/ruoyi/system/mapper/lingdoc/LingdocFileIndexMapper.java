@@ -90,4 +90,13 @@ public interface LingdocFileIndexMapper
      * @return checksum列表
      */
     public List<String> selectDuplicateChecksums(Long userId);
+
+    /**
+     * 按子路径前缀查询文件（用于删除文件夹时级联查询）
+     * 
+     * @param userId 用户ID
+     * @param subPath 子路径前缀
+     * @return 文件索引集合
+     */
+    public List<LingdocFileIndex> selectBySubPathPrefix(Long userId, String subPath);
 }

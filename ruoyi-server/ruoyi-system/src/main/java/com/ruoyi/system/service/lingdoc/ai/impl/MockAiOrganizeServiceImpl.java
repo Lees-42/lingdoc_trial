@@ -15,7 +15,6 @@ import com.ruoyi.system.service.lingdoc.ai.result.AiOrganizeResult;
  * @author lingdoc
  */
 @Service
-@Primary
 public class MockAiOrganizeServiceImpl implements IAiOrganizeService
 {
     @Override
@@ -29,7 +28,7 @@ public class MockAiOrganizeServiceImpl implements IAiOrganizeService
         r.setSummary(null);
         r.setKeywords(new ArrayList<>());
         r.setConfidence(BigDecimal.ZERO);
-        r.setTokenCost(0);
+        r.setTokenCost(0L);
         return r;
     }
 }

@@ -1,7 +1,7 @@
 <template>
   <div class="app-container">
     <!-- 页面标题 -->
-    <h2 class="page-title">文档上传</h2>
+    <h2 class="page-title">文件上传</h2>
     <p class="page-desc">拖拽文件到下方区域上传，上传后可选择文件执行自动规整，AI 将推荐规范命名与分类路径。</p>
 
     <!-- 文件上传区 -->
@@ -343,8 +343,9 @@ import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { UploadFilled, FolderOpened } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import VaultFolderPicker from '@/components/VaultFolderPicker/index.vue'
-import { getVaultTree, uploadVaultFile, delVaultFile } from '@/api/lingdoc/vault'
+import { getVaultTree } from '@/api/lingdoc/vault'
 import { listTag, addTag, bindTag, getFolderTags, unbindTagByTarget, unbindTagByTargetAndTagId } from '@/api/lingdoc/tag'
+import { uploadFile as uploadInboxFile, organizeUpload, batchOrganizeUpload, confirmUpload, batchConfirmUpload, delUpload, cleanUpload } from '@/api/lingdoc/upload'
 
 const { proxy } = getCurrentInstance()
 
@@ -465,6 +466,7 @@ const folderTagOptions = computed(() => {
 
 // 状态枚举
 const statusMap = {
+  uploading: { label: '上传中', type: 'info' },
   uploaded: { label: '已上传', type: 'info' },
   organizing: { label: '规整中', type: 'warning' },
   pending: { label: '待确认', type: 'primary' },
@@ -735,18 +737,19 @@ function handlePickerConfirm(path) {
   form.suggestedPath = path
 }
 
-/** 文件变更回调（仅添加到前端列表，不上传） */
-function handleFileChange(uploadFile) {
+/** 文件变更回调：异步上传到后端 inbox */
+async function handleFileChange(uploadFile) {
   const raw = uploadFile.raw
   const ext = raw.name.split('.').pop()
-  const fileId = 'temp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9)
+  const tempId = 'temp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9)
 
+  // 先添加到列表（上传中状态）
   const item = {
-    fileId: fileId,
+    fileId: tempId,
     originalName: raw.name,
     fileType: ext,
     fileSize: raw.size,
-    status: 'uploaded',
+    status: 'uploading',
     suggestedName: raw.name,
     suggestedPath: '',
     remark: '',
@@ -754,9 +757,39 @@ function handleFileChange(uploadFile) {
     inheritedTags: [],
     _raw: raw
   }
-
   fileList.value = [...fileList.value, item]
-  ElMessage.success(`已添加文件：${raw.name}，点击"确认"后保存到 Vault`)
+
+  // 异步上传到 inbox
+  const fd = new FormData()
+  fd.append('file', raw)
+  try {
+    const res = await uploadInboxFile(fd)
+    if (res.code === 200 && res.data) {
+      const inbox = res.data
+      const idx = fileList.value.findIndex(f => f.fileId === tempId)
+      if (idx !== -1) {
+        fileList.value[idx] = {
+          ...fileList.value[idx],
+          fileId: inbox.inboxId,
+          originalName: inbox.originalName,
+          fileType: inbox.fileType,
+          fileSize: inbox.fileSize,
+          status: 'uploaded',
+          _raw: null
+        }
+      }
+      ElMessage.success(`已上传：${raw.name}`)
+    } else {
+      throw new Error(res.msg || '上传失败')
+    }
+  } catch (e) {
+    const idx = fileList.value.findIndex(f => f.fileId === tempId)
+    if (idx !== -1) {
+      fileList.value[idx].status = 'failed'
+      fileList.value[idx].errorMsg = e.message || '上传失败'
+    }
+    ElMessage.error(`上传失败：${e.message || e}`)
+  }
 }
 
 /** 多选框变化 */
@@ -764,16 +797,84 @@ function handleSelectionChange(selection) {
   selectedIds.value = selection.map(item => item.fileId)
 }
 
+/** 将后端逗号分隔的 tagIds 解析为前端 tag 对象数组 */
+function parseTagIds(tagIdsStr) {
+  if (!tagIdsStr) return []
+  return tagIdsStr.split(',').map(id => {
+    const tag = allTags.value.find(t => t.tagId === id)
+    return tag || { tagId: id, tagName: id, tagColor: '#409EFF' }
+  }).filter(Boolean)
+}
+
 /** 自动规整按钮（单个文件） */
-function handleOrganize(row) {
-  // 预留：后端就绪后对接 organizeUpload API
-  ElMessage.info('自动规整功能开发中...')
+async function handleOrganize(row) {
+  if (row.status !== 'uploaded') {
+    ElMessage.warning('当前文件状态不支持自动规整')
+    return
+  }
+  if (row.fileId.startsWith('temp_')) {
+    ElMessage.warning('文件尚未上传完成，请稍后再试')
+    return
+  }
+
+  const idx = fileList.value.findIndex(f => f.fileId === row.fileId)
+  if (idx === -1) return
+
+  fileList.value[idx] = { ...fileList.value[idx], status: 'organizing' }
+
+  try {
+    const res = await organizeUpload(row.fileId)
+    if (res.code === 200 && res.data) {
+      const inbox = res.data
+      fileList.value[idx] = {
+        ...fileList.value[idx],
+        status: 'pending',
+        suggestedName: inbox.suggestedName || row.originalName,
+        suggestedPath: inbox.suggestedPath || '/',
+        tags: inbox.params?.tags || parseTagIds(inbox.tagIds),
+        aiSummary: inbox.aiSummary,
+        aiKeywords: inbox.aiKeywords,
+        confidence: inbox.confidence,
+        tokenCost: inbox.tokenCost
+      }
+      ElMessage.success(`「${row.originalName}」自动规整完成`)
+    } else {
+      throw new Error(res.msg || '规整失败')
+    }
+  } catch (e) {
+    fileList.value[idx] = { ...fileList.value[idx], status: 'failed', errorMsg: e.message || '规整失败' }
+    ElMessage.error(`自动规整失败：${e.message || e}`)
+  }
 }
 
 /** 批量自动规整 */
-function handleBatchOrganize() {
-  // 预留：后端就绪后对接 batchOrganizeUpload API
-  ElMessage.info('批量自动规整功能开发中...')
+async function handleBatchOrganize() {
+  const pendingList = fileList.value.filter(f => f.status === 'uploaded' && !f.fileId.startsWith('temp_'))
+  if (!pendingList.length) {
+    ElMessage.warning('没有待规整的文件')
+    return
+  }
+
+  let successCount = 0
+  let failCount = 0
+  for (const row of pendingList) {
+    try {
+      await handleOrganize(row)
+      if (fileList.value.find(f => f.fileId === row.fileId)?.status === 'pending') {
+        successCount++
+      } else {
+        failCount++
+      }
+    } catch (e) {
+      failCount++
+    }
+  }
+
+  if (failCount === 0) {
+    ElMessage.success(`批量自动规整完成，共 ${successCount} 个文件`)
+  } else {
+    ElMessage.warning(`批量自动规整完成，成功 ${successCount} 个，失败 ${failCount} 个`)
+  }
 }
 
 /** 编辑按钮 */
@@ -854,40 +955,11 @@ async function submitForm() {
   const idx = fileList.value.findIndex(f => f.fileId === form.fileId)
   if (idx === -1) return
 
-  const row = fileList.value[idx]
   const tagObjects = form.tagNames.map(name => getTagByName(name)).filter(Boolean)
+  const tagIds = tagObjects.map(t => t.tagId).filter(Boolean)
   const inherited = computeInheritedTags(form.suggestedPath)
 
-  // 如果文件尚未上传（有 _raw），先上传
-  let fileId = row.fileId
-  if (row._raw) {
-    const fd = new FormData()
-    fd.append('file', row._raw)
-    const subPath = form.suggestedPath ? form.suggestedPath.replace(/^\//, '') : ''
-    if (subPath) fd.append('subPath', subPath)
-
-    try {
-      const res = await uploadVaultFile(fd)
-      if (res.code === 200 && res.data) {
-        fileId = res.data.fileId
-        fileList.value[idx] = {
-          ...fileList.value[idx],
-          fileId: res.data.fileId,
-          originalName: res.data.fileName,
-          vaultPath: res.data.vaultPath,
-          _raw: null
-        }
-      } else {
-        ElMessage.error(res.msg || '上传失败')
-        return
-      }
-    } catch (e) {
-      ElMessage.error('上传失败：' + (e.message || e))
-      return
-    }
-  }
-
-  // 提交本次编辑新增的文件夹标签绑定（与文件标签独立，失败仅提示不阻断）
+  // 提交文件夹标签绑定（与文件归档独立，失败仅提示不阻断）
   for (const bind of pendingFolderTagBinds.value) {
     try {
       await bindTag({ targetType: 'D', targetId: bind.targetId, tagId: bind.tagId })
@@ -897,120 +969,63 @@ async function submitForm() {
   }
   pendingFolderTagBinds.value = []
 
-  // 标签同步：先解绑旧标签，再绑定新标签，失败时阻断状态变更
+  // 调用 confirmUpload 归档（后端负责文件标签绑定）
   try {
-    await unbindTagByTarget('F', fileId)
-  } catch (e) {
-    ElMessage.error('解绑旧标签失败，请重试')
-    return
-  }
-
-  const boundTagIds = []
-  let bindError = null
-  for (const tag of tagObjects) {
-    try {
-      await bindTag({ targetType: 'F', targetId: fileId, tagId: tag.tagId })
-      boundTagIds.push(tag.tagId)
-    } catch (e) {
-      bindError = `绑定标签 "${tag.tagName}" 失败`
-      break
-    }
-  }
-
-  // 若部分绑定失败，回滚已绑定的标签，并中断流程
-  if (bindError) {
-    for (const tagId of boundTagIds) {
-      try {
-        await unbindTagByTargetAndTagId('F', fileId, tagId)
-      } catch (e) {
-        console.error('回滚标签绑定失败', e)
+    const res = await confirmUpload({
+      fileId: form.fileId,
+      suggestedName: form.suggestedName,
+      suggestedPath: form.suggestedPath,
+      tagIds: tagIds,
+      remark: form.remark || ''
+    })
+    if (res.code === 200) {
+      fileList.value[idx] = {
+        ...fileList.value[idx],
+        suggestedName: form.suggestedName,
+        suggestedPath: form.suggestedPath,
+        remark: form.remark,
+        tags: tagObjects,
+        inheritedTags: inherited,
+        status: 'confirmed'
       }
+      open.value = false
+      resetForm()
+      ElMessage.success('确认成功')
+    } else {
+      ElMessage.error(res.msg || '归档失败')
     }
-    ElMessage.error(bindError + '，请重试')
-    return
+  } catch (e) {
+    ElMessage.error('归档失败：' + (e.message || e))
   }
-
-  fileList.value[idx] = {
-    ...fileList.value[idx],
-    suggestedName: form.suggestedName,
-    suggestedPath: form.suggestedPath,
-    remark: form.remark,
-    tags: tagObjects,
-    inheritedTags: inherited,
-    status: 'confirmed'
-  }
-
-  open.value = false
-  resetForm()
-  ElMessage.success('确认成功')
 }
 
 /** 单个确认：实际上传到 Vault */
 async function handleConfirm(row) {
-  if (!row._raw) {
-    ElMessage.warning('找不到文件数据')
-    return
-  }
-
   const idx = fileList.value.findIndex(f => f.fileId === row.fileId)
   if (idx === -1) return
 
-  // 构建 FormData
-  const formData = new FormData()
-  formData.append('file', row._raw)
-  const subPath = row.suggestedPath ? row.suggestedPath.replace(/^\//, '') : ''
-  if (subPath) {
-    formData.append('subPath', subPath)
-  }
+  const tagIds = (row.tags || []).map(t => t.tagId).filter(Boolean)
 
   try {
-    const res = await uploadVaultFile(formData)
-    if (res.code === 200 && res.data) {
-      const result = res.data
-      const lastSlash = result.vaultPath ? result.vaultPath.lastIndexOf('/') : -1
-      const newSuggestedPath = lastSlash > 0 ? result.vaultPath.substring(0, lastSlash) : '/'
-
-      // 保存文件标签（在上传成功后、状态变更前执行）
-      if (row.tags && row.tags.length > 0) {
-        for (const tag of row.tags) {
-          try {
-            await bindTag({ targetType: 'F', targetId: result.fileId, tagId: tag.tagId })
-          } catch (e) {
-            ElMessage.error(`标签 "${tag.tagName}" 绑定失败，文件未最终确认`)
-            // 更新文件ID和路径，但保持原状态，方便用户重试
-            fileList.value[idx] = {
-              ...fileList.value[idx],
-              fileId: result.fileId,
-              originalName: result.fileName,
-              suggestedName: result.fileName,
-              vaultPath: result.vaultPath,
-              suggestedPath: newSuggestedPath,
-              _raw: null
-            }
-            return
-          }
-        }
-      }
-
-      // 所有标签绑定成功后，才更新为 confirmed
+    const res = await confirmUpload({
+      fileId: row.fileId,
+      suggestedName: row.suggestedName || row.originalName,
+      suggestedPath: row.suggestedPath || '/',
+      tagIds: tagIds,
+      remark: row.remark || ''
+    })
+    if (res.code === 200) {
       fileList.value[idx] = {
         ...fileList.value[idx],
-        fileId: result.fileId,
-        originalName: result.fileName,
-        suggestedName: result.fileName,
-        vaultPath: result.vaultPath,
-        suggestedPath: newSuggestedPath,
         status: 'confirmed',
-        _raw: null,
-        inheritedTags: computeInheritedTags(newSuggestedPath)
+        inheritedTags: computeInheritedTags(row.suggestedPath || '/')
       }
-
-      ElMessage.success('文件已保存到 Vault')
+      ElMessage.success('文件已归档到 Vault')
     } else {
-      ElMessage.error(res.msg || '上传失败')
+      ElMessage.error(res.msg || '归档失败')
     }
   } catch (e) {
-    ElMessage.error('上传失败：' + (e.message || e))
+    ElMessage.error('归档失败：' + (e.message || e))
   }
 }
 
@@ -1020,7 +1035,7 @@ async function handleDelete(row) {
     // 若已上传到后端（fileId 非 temp_ 开头），先调用后端删除
     if (row.fileId && !row.fileId.startsWith('temp_')) {
       try {
-        await delVaultFile(row.fileId)
+        await delUpload(row.fileId)
       } catch (e) {
         console.error('后端删除失败', e)
       }
@@ -1037,85 +1052,49 @@ async function handleBatchConfirm() {
     ElMessage.warning('没有待确认的文件')
     return
   }
-  let successCount = 0
-  let failCount = 0
-  for (const row of pendingList) {
-    const idx = fileList.value.findIndex(f => f.fileId === row.fileId)
-    if (idx === -1) continue
-    if (!row._raw) {
-      // 没有原始文件数据，仅改状态
-      fileList.value[idx] = { ...fileList.value[idx], status: 'confirmed' }
-      successCount++
-      continue
-    }
-    const formData = new FormData()
-    formData.append('file', row._raw)
-    const subPath = row.suggestedPath ? row.suggestedPath.replace(/^\//, '') : ''
-    if (subPath) formData.append('subPath', subPath)
-    try {
-      const res = await uploadVaultFile(formData)
-      if (res.code === 200 && res.data) {
-        const result = res.data
-        fileList.value[idx] = {
-          ...fileList.value[idx],
-          fileId: result.fileId,
-          originalName: result.fileName,
-          suggestedName: result.fileName,
-          vaultPath: result.vaultPath,
-          status: 'confirmed',
-          _raw: null
+
+  // 组装批量确认请求
+  const requests = pendingList.map(row => ({
+    fileId: row.fileId,
+    suggestedName: row.suggestedName || row.originalName,
+    suggestedPath: row.suggestedPath || '/',
+    tagIds: (row.tags || []).map(t => t.tagId).filter(Boolean),
+    remark: row.remark || ''
+  }))
+
+  try {
+    const res = await batchConfirmUpload(requests)
+    if (res.code === 200 && res.data) {
+      const successList = res.data.success || []
+      const errors = res.data.errors || []
+
+      // 标记成功的文件
+      for (const success of successList) {
+        const idx = fileList.value.findIndex(f => f.fileId === success.fileId)
+        if (idx !== -1) {
+          fileList.value[idx] = { ...fileList.value[idx], status: 'confirmed' }
         }
-        // 从 vaultPath 推导 suggestedPath（去掉文件名，根目录为 '/'）
-        const lastSlash = result.vaultPath ? result.vaultPath.lastIndexOf('/') : -1
-        const vaultDir = lastSlash > 0 ? result.vaultPath.substring(0, lastSlash) : '/'
-        fileList.value[idx].suggestedPath = vaultDir
-
-        // 保存文件标签
-        let tagBindFailed = false
-        if (row.tags && row.tags.length > 0) {
-          for (const tag of row.tags) {
-            try {
-              await bindTag({ targetType: 'F', targetId: result.fileId, tagId: tag.tagId })
-            } catch (e) {
-              tagBindFailed = true
-              ElMessage.error(`文件 "${row.originalName}" 的标签 "${tag.tagName}" 绑定失败`)
-              break
-            }
-          }
-        }
-
-        if (tagBindFailed) {
-          // 标签绑定失败：文件已上传，但状态不置为 confirmed
-          fileList.value[idx] = {
-            ...fileList.value[idx],
-            fileId: result.fileId,
-            originalName: result.fileName,
-            suggestedName: result.fileName,
-            vaultPath: result.vaultPath,
-            suggestedPath: vaultDir,
-            _raw: null
-          }
-          failCount++
-          continue
-        }
-
-        // 计算继承标签
-        fileList.value[idx].inheritedTags = computeInheritedTags(fileList.value[idx].suggestedPath)
-
-        successCount++
-      } else {
-        failCount++
-        fileList.value[idx] = { ...fileList.value[idx], status: 'failed' }
       }
-    } catch (e) {
-      failCount++
-      fileList.value[idx] = { ...fileList.value[idx], status: 'failed' }
+
+      // 标记失败的文件
+      for (const err of errors) {
+        const fileId = err.split(':')[0]
+        const idx = fileList.value.findIndex(f => f.fileId === fileId)
+        if (idx !== -1) {
+          fileList.value[idx] = { ...fileList.value[idx], status: 'failed', errorMsg: err }
+        }
+      }
+
+      if (errors.length > 0) {
+        ElMessage.warning(`成功 ${successList.length} 个，失败 ${errors.length} 个`)
+      } else {
+        ElMessage.success(`成功归档 ${successList.length} 个文件`)
+      }
+    } else {
+      ElMessage.error(res.msg || '批量归档失败')
     }
-  }
-  if (failCount > 0) {
-    ElMessage.warning(`成功 ${successCount} 个，失败 ${failCount} 个`)
-  } else {
-    ElMessage.success(`成功归档 ${successCount} 个文件`)
+  } catch (e) {
+    ElMessage.error('批量归档失败：' + (e.message || e))
   }
 }
 
@@ -1130,7 +1109,7 @@ async function handleBatchDelete() {
       const row = fileList.value.find(f => f.fileId === id)
       if (row && row.fileId && !row.fileId.startsWith('temp_')) {
         try {
-          await delVaultFile(row.fileId)
+          await delUpload(row.fileId)
         } catch (e) {
           console.error('后端删除失败', e)
         }
@@ -1149,13 +1128,13 @@ async function handleClean() {
     return
   }
   proxy.$modal.confirm('是否确认清空所有已上传文件？').then(async () => {
-    for (const row of fileList.value) {
-      if (row.fileId && !row.fileId.startsWith('temp_')) {
-        try {
-          await delVaultFile(row.fileId)
-        } catch (e) {
-          console.error('后端删除失败', e)
-        }
+    // 调用后端清空接口（清空当前用户的所有 inbox 文件）
+    const hasBackendFiles = fileList.value.some(f => f.fileId && !f.fileId.startsWith('temp_'))
+    if (hasBackendFiles) {
+      try {
+        await cleanUpload()
+      } catch (e) {
+        console.error('后端清空失败', e)
       }
     }
     fileList.value = []

@@ -58,21 +58,22 @@ public class VaultDbInitializer
                 log.info("创建 Vault 元数据目录: {}", lingdocDir);
             }
 
-            // 如果数据库已存在，跳过初始化
-            if (Files.exists(dbFile))
-            {
-                log.info("Vault SQLite 数据库已存在，跳过初始化: {}", dbFile);
-                return dbFile;
-            }
-
-            // 创建并初始化数据库
+            // 创建并初始化数据库（或补充缺失的表）
             SQLiteDataSource dataSource = new SQLiteDataSource();
             dataSource.setUrl(SQLiteVaultConfig.buildJdbcUrl(dbFile));
             dataSource.setEncoding(SQLiteVaultConfig.ENCODING);
 
+            boolean dbExists = Files.exists(dbFile);
             executeDdl(dataSource);
 
-            log.info("Vault SQLite 数据库初始化完成: {}", dbFile);
+            if (dbExists)
+            {
+                log.info("Vault SQLite 数据库已存在，已补充可能缺失的表: {}", dbFile);
+            }
+            else
+            {
+                log.info("Vault SQLite 数据库初始化完成: {}", dbFile);
+            }
             return dbFile;
         }
         catch (Exception e)

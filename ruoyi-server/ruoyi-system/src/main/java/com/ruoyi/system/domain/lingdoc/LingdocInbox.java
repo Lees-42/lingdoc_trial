@@ -54,7 +54,7 @@ public class LingdocInbox extends BaseEntity
     private BigDecimal confidence;
 
     /** Token消耗 */
-    private Integer tokenCost;
+    private Long tokenCost;
 
     /** 错误信息 */
     private String errorMsg;
@@ -189,12 +189,12 @@ public class LingdocInbox extends BaseEntity
         this.confidence = confidence;
     }
 
-    public Integer getTokenCost()
+    public Long getTokenCost()
     {
         return tokenCost;
     }
 
-    public void setTokenCost(Integer tokenCost)
+    public void setTokenCost(Long tokenCost)
     {
         this.tokenCost = tokenCost;
     }

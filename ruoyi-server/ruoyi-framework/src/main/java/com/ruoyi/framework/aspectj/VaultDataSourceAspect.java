@@ -40,10 +40,12 @@ public class VaultDataSourceAspect
             + "execution(* com.ruoyi.system.service.lingdoc.ILingdocTagService.*(..)) || "
             + "execution(* com.ruoyi.system.service.lingdoc.ILingdocFormTaskService.*(..)) || "
             + "execution(* com.ruoyi.system.service.lingdoc.ILingdocInboxService.*(..)) || "
+            + "execution(* com.ruoyi.system.service.lingdoc.IFormDocQueryService.*(..)) || "
             + "execution(* com.ruoyi.system.service.lingdoc.LingdocVaultServiceImpl.*(..)) || "
             + "execution(* com.ruoyi.system.service.lingdoc.LingdocTagServiceImpl.*(..)) || "
             + "execution(* com.ruoyi.system.service.lingdoc.LingdocFormTaskServiceImpl.*(..)) || "
-            + "execution(* com.ruoyi.system.service.lingdoc.LingdocInboxServiceImpl.*(..))")
+            + "execution(* com.ruoyi.system.service.lingdoc.LingdocInboxServiceImpl.*(..)) || "
+            + "execution(* com.ruoyi.system.service.lingdoc.FormDocQueryServiceImpl.*(..))")
     public void lingdocServicePointCut()
     {
     }

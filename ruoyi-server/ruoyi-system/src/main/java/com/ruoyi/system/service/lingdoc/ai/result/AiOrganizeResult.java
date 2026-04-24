@@ -30,7 +30,7 @@ public class AiOrganizeResult
     private BigDecimal confidence;
 
     /** Token 消耗 */
-    private Integer tokenCost;
+    private Long tokenCost;
 
     public AiCategorySuggestion getCategory()
     {
@@ -100,12 +100,12 @@ public class AiOrganizeResult
         this.confidence = confidence;
     }
 
-    public Integer getTokenCost()
+    public Long getTokenCost()
     {
         return tokenCost;
     }
 
-    public void setTokenCost(Integer tokenCost)
+    public void setTokenCost(Long tokenCost)
     {
         this.tokenCost = tokenCost;
     }

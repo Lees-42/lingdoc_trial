@@ -297,7 +297,7 @@ async function submitUpload() {
       ElMessage.success(res.msg || '上传成功')
       showUploadDialog.value = false
       // 加载任务详情
-      await loadTaskDetail(res.data.taskId)
+      await loadTaskDetail(res.taskId)
     } else {
       ElMessage.error(res.msg || '上传失败')
     }
@@ -316,8 +316,8 @@ async function loadTaskDetail(taskId) {
     const res = await getFormTask(taskId)
     if (res.code === 200) {
       currentTask.value = res.data
-      fields.value = res.data.fields || []
-      references.value = res.data.references || []
+      fields.value = res.fields || []
+      references.value = res.references || []
       // 构建预览URL
       if (currentTask.value.originalFileUrl) {
         originalFileUrl.value = import.meta.env.VITE_APP_BASE_API + currentTask.value.originalFileUrl
