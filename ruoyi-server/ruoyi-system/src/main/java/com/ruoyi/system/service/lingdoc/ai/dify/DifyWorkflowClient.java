@@ -9,6 +9,10 @@ import org.springframework.http.MediaType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.context.annotation.Conditional;
+import org.springframework.context.annotation.Condition;
+import org.springframework.context.annotation.ConditionContext;
+import org.springframework.core.type.AnnotatedTypeMetadata;
 import com.ruoyi.system.config.DifyProperties;
 import com.ruoyi.system.config.DifyProperties.WorkflowConfig;
 
@@ -17,12 +21,27 @@ import com.ruoyi.system.config.DifyProperties.WorkflowConfig;
  * <p>
  * 每个 Workflow 可独立配置 base-url + api-key + timeout。
  * RestTemplate 按 Workflow 名称缓存，避免重复创建。
+ * <p>
+ * 注意：当 lingdoc.ai.dify.enabled=false 时，此 Bean 不会创建。
  *
  * @author lingdoc
  */
 @Component
+@Conditional(DifyWorkflowClient.DifyEnabledCondition.class)
 public class DifyWorkflowClient
 {
+    /**
+     * 条件：仅当 lingdoc.ai.dify.enabled=true 时创建此 Bean
+     */
+    public static class DifyEnabledCondition implements Condition
+    {
+        @Override
+        public boolean matches(ConditionContext context, AnnotatedTypeMetadata metadata)
+        {
+            String enabled = context.getEnvironment().getProperty("lingdoc.ai.dify.enabled", "true");
+            return "true".equalsIgnoreCase(enabled);
+        }
+    }
     @Autowired
     private DifyProperties difyProps;
 

@@ -9,8 +9,10 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Conditional;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
+import com.ruoyi.system.service.lingdoc.ai.dify.DifyWorkflowClient.DifyEnabledCondition;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ruoyi.common.utils.StringUtils;
 import com.ruoyi.system.domain.lingdoc.LingdocTag;
@@ -26,6 +28,7 @@ import com.ruoyi.system.service.lingdoc.ai.result.AiTagSuggestion;
 
 @Service
 @Primary
+@Conditional(DifyEnabledCondition.class)
 public class DifyAiOrganizeServiceImpl implements IAiOrganizeService
 {
     private static final Logger log = LoggerFactory.getLogger(DifyAiOrganizeServiceImpl.class);

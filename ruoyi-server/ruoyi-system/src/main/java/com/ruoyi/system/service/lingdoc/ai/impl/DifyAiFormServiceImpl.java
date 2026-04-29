@@ -11,7 +11,7 @@ import org.jsoup.Jsoup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Primary;
+import org.springframework.context.annotation.Conditional;
 import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -28,6 +28,8 @@ import com.ruoyi.system.service.lingdoc.ai.dify.DifyFormExtractOutput;
 import com.ruoyi.system.service.lingdoc.ai.dify.DifyFormGenerateOutput;
 import com.ruoyi.system.service.lingdoc.ai.dify.DifyWorkflowClient;
 
+import com.ruoyi.system.service.lingdoc.ai.dify.DifyWorkflowClient.DifyEnabledCondition;
+
 /**
  * 表格填写助手 Dify 实现
  * <p>
@@ -38,7 +40,7 @@ import com.ruoyi.system.service.lingdoc.ai.dify.DifyWorkflowClient;
  * @author lingdoc
  */
 @Service
-@Primary
+@Conditional(DifyEnabledCondition.class)
 public class DifyAiFormServiceImpl implements IAiFormService
 {
     private static final Logger log = LoggerFactory.getLogger(DifyAiFormServiceImpl.class);

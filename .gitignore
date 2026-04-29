@@ -24,3 +24,6 @@ yarn.lock
 
 # Redis runtime data
 redis-temp/
+venv/
+__pycache__/
+*.pyc

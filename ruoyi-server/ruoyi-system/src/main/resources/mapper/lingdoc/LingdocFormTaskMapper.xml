@@ -117,9 +117,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="tokenCost != null">token_cost = #{tokenCost},</if>
             <if test="errorMsg != null">error_msg = #{errorMsg},</if>
             <if test="createBy != null">create_by = #{createBy},</if>
-            <if test="createTime != null">create_time = #{createTime},</if>
-            <if test="updateBy != null">update_by = #{updateBy},</if>
-            <if test="updateTime != null">update_time = #{updateTime},</if>
+            update_time = datetime('now','localtime'),
             <if test="remark != null">remark = #{remark},</if>
         </trim>
         where task_id = #{taskId}
