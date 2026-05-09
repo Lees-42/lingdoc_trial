@@ -30,8 +30,8 @@ CREATE TABLE IF NOT EXISTS `lingdoc_file_index` (
   `content_path`    TEXT    DEFAULT NULL,
   `content_size`    INTEGER DEFAULT 0,
   `is_desensitized` TEXT    DEFAULT '0',
-  `create_time`     TEXT    DEFAULT (datetime('now','localtime')),
-  `update_time`     TEXT    DEFAULT (datetime('now','localtime'))
+  `create_time`     TEXT    DEFAULT (datetime('now')),
+  `update_time`     TEXT    DEFAULT (datetime('now'))
 );
 
 CREATE INDEX IF NOT EXISTS `idx_file_index_user_id` ON `lingdoc_file_index` (`user_id`);
@@ -47,7 +47,7 @@ CREATE TRIGGER IF NOT EXISTS `trg_file_index_update_time`
 AFTER UPDATE ON `lingdoc_file_index`
 FOR EACH ROW
 BEGIN
-  UPDATE `lingdoc_file_index` SET `update_time` = datetime('now','localtime') WHERE `file_id` = NEW.file_id;
+  UPDATE `lingdoc_file_index` SET `update_time` = datetime('now') WHERE `file_id` = NEW.file_id;
 END;
 
 -- ----------------------------
@@ -62,7 +62,7 @@ CREATE TABLE IF NOT EXISTS `lingdoc_file_version` (
   `operation_type` TEXT    DEFAULT '0',
   `checksum`       TEXT    DEFAULT NULL,
   `operator_id`    INTEGER DEFAULT NULL,
-  `create_time`    TEXT    DEFAULT (datetime('now','localtime'))
+  `create_time`    TEXT    DEFAULT (datetime('now'))
 );
 
 CREATE INDEX IF NOT EXISTS `idx_file_version_file_id` ON `lingdoc_file_version` (`file_id`);
@@ -81,8 +81,8 @@ CREATE TABLE IF NOT EXISTS `lingdoc_file_ai_meta` (
   `embedding_status` TEXT    DEFAULT '0',
   `summary`          TEXT    DEFAULT NULL,
   `keywords`         TEXT    DEFAULT NULL,
-  `create_time`      TEXT    DEFAULT (datetime('now','localtime')),
-  `update_time`      TEXT    DEFAULT (datetime('now','localtime'))
+  `create_time`      TEXT    DEFAULT (datetime('now')),
+  `update_time`      TEXT    DEFAULT (datetime('now'))
 );
 
 CREATE INDEX IF NOT EXISTS `idx_file_ai_meta_kb_id` ON `lingdoc_file_ai_meta` (`kb_id`);
@@ -94,7 +94,7 @@ CREATE TRIGGER IF NOT EXISTS `trg_file_ai_meta_update_time`
 AFTER UPDATE ON `lingdoc_file_ai_meta`
 FOR EACH ROW
 BEGIN
-  UPDATE `lingdoc_file_ai_meta` SET `update_time` = datetime('now','localtime') WHERE `file_id` = NEW.file_id;
+  UPDATE `lingdoc_file_ai_meta` SET `update_time` = datetime('now') WHERE `file_id` = NEW.file_id;
 END;
 
 -- ----------------------------
@@ -106,7 +106,7 @@ CREATE TABLE IF NOT EXISTS `lingdoc_tag` (
   `tag_color`   TEXT    DEFAULT '#409EFF',
   `tag_scope`   TEXT    DEFAULT 'A',
   `sort_order`  INTEGER DEFAULT 0,
-  `create_time` TEXT    DEFAULT (datetime('now','localtime'))
+  `create_time` TEXT    DEFAULT (datetime('now'))
 );
 
 -- ----------------------------
@@ -118,7 +118,7 @@ CREATE TABLE IF NOT EXISTS `lingdoc_tag_binding` (
   `target_id`   TEXT    NOT NULL,
   `tag_id`      TEXT    NOT NULL,
   `bind_type`   TEXT    DEFAULT '0',
-  `create_time` TEXT    DEFAULT (datetime('now','localtime')),
+  `create_time` TEXT    DEFAULT (datetime('now')),
   UNIQUE (`target_type`, `target_id`, `tag_id`, `bind_type`)
 );
 
@@ -135,7 +135,7 @@ CREATE TABLE IF NOT EXISTS `lingdoc_desensitized_file` (
   `des_content`   TEXT    NOT NULL,
   `des_checksum`  TEXT    NOT NULL,
   `rule_id`       TEXT    DEFAULT NULL,
-  `create_time`   TEXT    DEFAULT (datetime('now','localtime'))
+  `create_time`   TEXT    DEFAULT (datetime('now'))
 );
 
 CREATE INDEX IF NOT EXISTS `idx_desensitized_checksum` ON `lingdoc_desensitized_file` (`des_checksum`);
@@ -160,9 +160,9 @@ CREATE TABLE IF NOT EXISTS `lingdoc_form_task` (
   `token_cost`        INTEGER DEFAULT 0,
   `error_msg`         TEXT    DEFAULT NULL,
   `create_by`         TEXT    DEFAULT '',
-  `create_time`       TEXT    DEFAULT (datetime('now','localtime')),
+  `create_time`       TEXT    DEFAULT (datetime('now')),
   `update_by`         TEXT    DEFAULT '',
-  `update_time`       TEXT    DEFAULT (datetime('now','localtime')),
+  `update_time`       TEXT    DEFAULT (datetime('now')),
   `remark`            TEXT    DEFAULT NULL
 );
 
@@ -177,7 +177,7 @@ CREATE TRIGGER IF NOT EXISTS `trg_form_task_update_time`
 AFTER UPDATE ON `lingdoc_form_task`
 FOR EACH ROW
 BEGIN
-  UPDATE `lingdoc_form_task` SET `update_time` = datetime('now','localtime') WHERE `task_id` = NEW.task_id;
+  UPDATE `lingdoc_form_task` SET `update_time` = datetime('now') WHERE `task_id` = NEW.task_id;
 END;
 
 -- ----------------------------
@@ -196,8 +196,8 @@ CREATE TABLE IF NOT EXISTS `lingdoc_form_field` (
   `source_doc_id`   TEXT    DEFAULT NULL,
   `source_doc_name` TEXT    DEFAULT NULL,
   `sort_order`      INTEGER DEFAULT 0,
-  `create_time`     TEXT    DEFAULT (datetime('now','localtime')),
-  `update_time`     TEXT    DEFAULT (datetime('now','localtime'))
+  `create_time`     TEXT    DEFAULT (datetime('now')),
+  `update_time`     TEXT    DEFAULT (datetime('now'))
 );
 
 CREATE INDEX IF NOT EXISTS `idx_form_field_task_id` ON `lingdoc_form_field` (`task_id`);
@@ -209,7 +209,7 @@ CREATE TRIGGER IF NOT EXISTS `trg_form_field_update_time`
 AFTER UPDATE ON `lingdoc_form_field`
 FOR EACH ROW
 BEGIN
-  UPDATE `lingdoc_form_field` SET `update_time` = datetime('now','localtime') WHERE `field_id` = NEW.field_id;
+  UPDATE `lingdoc_form_field` SET `update_time` = datetime('now') WHERE `field_id` = NEW.field_id;
 END;
 
 -- ----------------------------
@@ -224,7 +224,7 @@ CREATE TABLE IF NOT EXISTS `lingdoc_form_reference` (
   `doc_type`      TEXT    DEFAULT NULL,
   `relevance`     REAL    DEFAULT 0.00,
   `is_selected`   TEXT    DEFAULT '1',
-  `create_time`   TEXT    DEFAULT (datetime('now','localtime'))
+  `create_time`   TEXT    DEFAULT (datetime('now'))
 );
 
 CREATE INDEX IF NOT EXISTS `idx_form_reference_task_id` ON `lingdoc_form_reference` (`task_id`);
@@ -251,8 +251,8 @@ CREATE TABLE IF NOT EXISTS `lingdoc_inbox` (
   `token_cost`      INTEGER DEFAULT 0,
   `error_msg`       TEXT    DEFAULT NULL,
   `remark`          TEXT    DEFAULT NULL,
-  `create_time`     TEXT    DEFAULT (datetime('now','localtime')),
-  `update_time`     TEXT    DEFAULT (datetime('now','localtime'))
+  `create_time`     TEXT    DEFAULT (datetime('now')),
+  `update_time`     TEXT    DEFAULT (datetime('now'))
 );
 
 CREATE INDEX IF NOT EXISTS `idx_inbox_user_id` ON `lingdoc_inbox` (`user_id`);
@@ -264,5 +264,5 @@ CREATE TRIGGER IF NOT EXISTS `trg_inbox_update_time`
 AFTER UPDATE ON `lingdoc_inbox`
 FOR EACH ROW
 BEGIN
-  UPDATE `lingdoc_inbox` SET `update_time` = datetime('now','localtime') WHERE `inbox_id` = NEW.inbox_id;
+  UPDATE `lingdoc_inbox` SET `update_time` = datetime('now') WHERE `inbox_id` = NEW.inbox_id;
 END;
