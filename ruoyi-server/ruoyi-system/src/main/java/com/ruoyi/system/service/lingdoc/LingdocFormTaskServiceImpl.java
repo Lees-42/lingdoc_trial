@@ -436,7 +436,7 @@ public class LingdocFormTaskServiceImpl implements ILingdocFormTaskService
         {
             return "filled_" + DateUtils.dateTimeNow() + ".html";
         }
-        return originalFileName.replaceAll("\\.(?=[^\\.]+$)", "_已填写_" + DateUtils.dateTimeNow() + ".$0");
+        return originalFileName.replaceAll("\\.(?=[^\\.]+$)", "_已填写_" + DateUtils.dateTimeNow() + "$0");
     }
 
     /**
