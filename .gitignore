@@ -1,0 +1,61 @@
+# ===========================================
+# LingDoc AI Service - .gitignore
+# ===========================================
+# ⚠️ 核心安全规则：.env 文件严禁提交到 Git
+# 包含: DashScope API Key / 阿里云密钥 / 内部共享 Token
+# ===========================================
+
+# --- 敏感配置（绝对禁止提交） ---
+.env
+.env.*
+*.env.local
+*.env.production
+*.env.development
+secrets/
+credentials/
+*.key
+*.pem
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+venv/
+ENV/
+env/
+.venv/
+
+# --- IDE / 编辑器 ---
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# --- 日志与临时文件 ---
+*.log
+logs/
+tmp/
+temp/
+*.tmp
+
+# --- Docker ---
+*.pid
