@@ -127,81 +127,81 @@ async def _handle_form_extract(inputs: Dict, task_id: str) -> Dict:
     
     logger.info(f"[EXTRACT_COMPAT:{task_id}] fileName={file_name}, fileType={file_type}")
     
-    # 如果 fileContent 为空，尝试从上传目录找文件
+    # 1. 查找空白模板文件
     file_path = None
-    if not file_content or len(file_content.strip()) < 10:
-        # 尝试多个可能的上传路径
-        possible_paths = [
-            f"/tmp/lingdoc/uploads/{file_name}",
-            f"/tmp/lingdoc/{file_name}",
-            f"/tmp/lingdoc/form/upload/{file_name}",
-        ]
-        for p in possible_paths:
-            if os.path.exists(p):
-                file_path = p
-                logger.info(f"[EXTRACT_COMPAT:{task_id}] 找到文件: {p}")
+    # 尝试多个可能的上传路径
+    possible_patterns = [
+        f"/tmp/lingdoc/upload/lingdoc/form/**/{file_name}",
+        f"/tmp/lingdoc/uploads/{file_name}",
+        f"/tmp/lingdoc/{file_name}",
+        f"/tmp/lingdoc/form/upload/{file_name}",
+    ]
+    import glob
+    for pattern in possible_patterns:
+        matches = glob.glob(pattern, recursive=True)
+        if matches:
+            file_path = matches[0]
+            logger.info(f"[EXTRACT_COMPAT:{task_id}] 找到文件: {file_path}")
+            break
+    
+    # 如果精确匹配失败，尝试根据文件名前缀模糊匹配
+    if not file_path:
+        base_name = os.path.splitext(file_name)[0]
+        all_files = glob.glob("/tmp/lingdoc/upload/lingdoc/form/**/*", recursive=True)
+        for f in all_files:
+            if os.path.basename(f).startswith(base_name):
+                file_path = f
+                logger.info(f"[EXTRACT_COMPAT:{task_id}] 模糊匹配找到文件: {file_path}")
                 break
     
-    # 如果找到文件路径，用本地提取
-    if file_path:
-        result = await form_service.extract_from_document(file_path, task_id)
-        if result.get("success"):
-            extracted = result.get("data", {})
-            fields = []
-            for i, (key, value) in enumerate(extracted.items()):
-                fields.append({
-                    "fieldName": key,
-                    "fieldType": "text",
-                    "fieldLabel": key,
-                    "suggestedValue": str(value) if not isinstance(value, list) else ", ".join(str(v) for v in value),
-                    "confidence": 0.85,
-                    "sourceDocId": "",
-                    "sourceDocName": file_name,
-                    "sortOrder": i,
-                    "options": []
-                })
-            return {
-                "fields": fields,
-                "references": [],
-                "tokenCost": result.get("token_usage", 0)
-            }
+    # 2. 从模板提取字段定义
+    fields = []
+    if file_path and os.path.exists(file_path):
+        field_list = form_service._extract_fields_from_template(file_path)
+        for i, field_name in enumerate(field_list):
+            fields.append({
+                "fieldName": field_name,
+                "fieldType": "text",
+                "fieldLabel": field_name,
+                "suggestedValue": "",
+                "confidence": 0.85,
+                "sourceDocId": "",
+                "sourceDocName": file_name,
+                "sortOrder": i,
+                "options": []
+            })
+        logger.info(f"[EXTRACT_COMPAT:{task_id}] 从模板提取 {len(fields)} 个字段")
+    else:
+        logger.warning(f"[EXTRACT_COMPAT:{task_id}] 未找到模板文件，返回空字段")
     
-    # 兜底：如果 fileContent 有值，直接用 LLM 提取
-    if file_content and len(file_content.strip()) > 10:
-        # 创建一个临时文件
-        tmp_path = f"/tmp/lingdoc/compat_{task_id}.txt"
-        os.makedirs("/tmp/lingdoc", exist_ok=True)
-        with open(tmp_path, "w", encoding="utf-8") as f:
-            f.write(file_content)
-        
-        result = await form_service.extract_from_document(tmp_path, task_id)
-        if result.get("success"):
-            extracted = result.get("data", {})
-            fields = []
-            for i, (key, value) in enumerate(extracted.items()):
-                fields.append({
-                    "fieldName": key,
-                    "fieldType": "text",
-                    "fieldLabel": key,
-                    "suggestedValue": str(value) if not isinstance(value, list) else ", ".join(str(v) for v in value),
-                    "confidence": 0.85,
-                    "sourceDocId": "",
-                    "sourceDocName": file_name,
-                    "sortOrder": i,
-                    "options": []
-                })
-            return {
-                "fields": fields,
-                "references": [],
-                "tokenCost": result.get("token_usage", 0)
-            }
+    # 3. 从 Vault 读取参考文档列表
+    references = []
+    try:
+        vault_db = "/tmp/lingdoc/vault/default/.lingdoc/vault.db"
+        if os.path.exists(vault_db):
+            import sqlite3
+            conn = sqlite3.connect(vault_db)
+            cursor = conn.cursor()
+            cursor.execute("SELECT file_id, file_name, abs_path, file_type FROM lingdoc_file_index WHERE source_type = '0'")
+            for row in cursor.fetchall():
+                # 排除空白申请表本身
+                if file_name not in row[1]:
+                    references.append({
+                        "docId": row[0],
+                        "docName": row[1],
+                        "docPath": row[2],
+                        "docType": row[3],
+                        "relevance": 0.9
+                    })
+            conn.close()
+            logger.info(f"[EXTRACT_COMPAT:{task_id}] 从 Vault 读取 {len(references)} 个参考文档")
+    except Exception as e:
+        logger.warning(f"[EXTRACT_COMPAT:{task_id}] 读取 Vault 参考文档失败: {e}")
     
-    # 如果都失败了，返回空字段列表
-    logger.warning(f"[EXTRACT_COMPAT:{task_id}] 无法提取内容，返回空字段")
     return {
-        "fields": [],
-        "references": [],
-        "tokenCost": 0
+        "fields": fields,
+        "references": references,
+        "tokenCost": e2e_result.get("token_usage", 0) if e2e_result.get("token_usage") else 0
     }
 
 
@@ -231,35 +231,57 @@ async def _handle_form_generate(inputs: Dict, task_id: str) -> Dict:
     except json.JSONDecodeError:
         confirmed_fields = []
     
-    # 转为 fill_values 格式
-    fill_values = {}
-    for field in confirmed_fields:
-        name = field.get("fieldName", "")
-        value = field.get("fieldValue", "")
-        if name:
-            fill_values[name] = value
+    # 2. 从 Vault 获取参考文档路径
+    reference_paths = []
+    try:
+        vault_db = "/tmp/lingdoc/vault/default/.lingdoc/vault.db"
+        if os.path.exists(vault_db):
+            import sqlite3
+            conn = sqlite3.connect(vault_db)
+            cursor = conn.cursor()
+            cursor.execute("SELECT abs_path FROM lingdoc_file_index WHERE source_type = '0'")
+            for row in cursor.fetchall():
+                path = row[0]
+                # 排除空白申请表本身
+                if original_file_path not in path and os.path.exists(path):
+                    reference_paths.append(path)
+            conn.close()
+            logger.info(f"[GENERATE_COMPAT:{task_id}] 参考文档: {reference_paths}")
+    except Exception as e:
+        logger.warning(f"[GENERATE_COMPAT:{task_id}] 读取 Vault 参考文档失败: {e}")
     
     # 生成输出路径
     output_path = original_file_path.replace("_空白_", "_已填写_") if "_空白_" in original_file_path else f"{original_file_path.rsplit('.', 1)[0]}_filled.{file_type}"
     os.makedirs(os.path.dirname(output_path) if os.path.dirname(output_path) else "/tmp/lingdoc/output", exist_ok=True)
     
-    # 调用渲染器
-    render_result = form_service.render_document(
-        template_path=original_file_path,
-        output_path=output_path,
-        fill_values=fill_values
-    )
+    # 4. 如果有参考文档，调用端到端填表（提取+匹配+渲染）
+    if reference_paths and os.path.exists(original_file_path):
+        logger.info(f"[GENERATE_COMPAT:{task_id}] 调用端到端填表 | 参考文档={len(reference_paths)}")
+        e2e_result = await form_service.fill_form_end_to_end(
+            reference_paths=reference_paths,
+            template_path=original_file_path,
+            output_path=output_path,
+            task_id=task_id
+        )
+        
+        if e2e_result.get("success"):
+            logger.info(f"[GENERATE_COMPAT:{task_id}] 端到端填表成功: {e2e_result.get('output_path')}")
+            return {
+                "filledFilePath": e2e_result.get("output_path", output_path),
+                "filledValues": e2e_result.get("fill_values", {}),
+                "tokenCost": e2e_result.get("token_usage", 0) if e2e_result.get("token_usage") else 0
+            }
+        else:
+            logger.warning(f"[GENERATE_COMPAT:{task_id}] 端到端填表失败: {e2e_result.get('error')}，回退到直接渲染")
     
-    if render_result.get("success"):
-        logger.info(f"[GENERATE_COMPAT:{task_id}] 渲染成功: {output_path}")
-        return {
-            "filledFilePath": output_path,
-            "filledValues": fill_values,
-            "tokenCost": 0  # 本地渲染不消耗 LLM token
-        }
-    else:
-        logger.error(f"[GENERATE_COMPAT:{task_id}] 渲染失败: {render_result.get('error')}")
-        raise RuntimeError(f"渲染失败: {render_result.get('error')}")
+    # 5. 兜底：如果没有参考文档或端到端失败，用 confirmedFields 直接渲染
+    fill_values = {}
+    for field in confirmed_fields:
+        name = field.get("fieldName", "")
+        # 优先用 userValue，其次 aiValue，最后 suggestedValue
+        value = field.get("userValue", "") or field.get("aiValue", "") or field.get("suggestedValue", "")
+        if name:
+            fill_values[name] = value
 
 
 async def _handle_default(inputs: Dict, task_id: str) -> Dict:
