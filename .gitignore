@@ -24,3 +24,12 @@ yarn.lock
 
 # Redis runtime data
 redis-temp/
+
+# AI Service
+lingdoc-ai-service/venv/
+lingdoc-ai-service/__pycache__/
+lingdoc-ai-service/*.pyc
+lingdoc-ai-service/.env
+lingdoc-ai-service/*.log
+lingdoc-ai-service/output/
+lingdoc-ai-service/uploads/

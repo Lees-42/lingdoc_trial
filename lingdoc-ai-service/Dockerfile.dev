@@ -1,0 +1,37 @@
+# =============================================================================
+# AI Service - 开发模式 Docker 镜像
+# =============================================================================
+# 特点：
+#   - 基于 python:3.11-slim
+#   - uvicorn --reload 热重载
+#   - 代码通过 volume 挂载，本地修改秒级生效
+# =============================================================================
+
+FROM python:3.11-slim
+
+# 设置工作目录
+WORKDIR /app
+
+# 安装系统依赖（PaddleOCR 需要）
+RUN apt-get update && apt-get install -y \
+    libgl1-mesa-glx \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
+    libgomp1 \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# 复制依赖文件并安装（层缓存优化）
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# 创建上传目录
+RUN mkdir -p /uploads/lingdoc /tmp/lingdoc/output
+
+# 暴露端口
+EXPOSE 8000
+
+# 开发模式：热重载，单 worker（方便调试）
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--reload-dir", "/app/app"]
