@@ -36,6 +36,7 @@ from app.config import config, validate_config
 from app.utils.logger import logger, setup_logger
 from app.routers import doc as doc_router
 from app.routers import form as form_router
+from app.routers import dify_compat as dify_compat_router
 
 
 # =============================================================================
@@ -205,6 +206,9 @@ async def global_exception_handler(request: Request, exc: Exception):
 # 业务路由（所有 /api/ai/v1/* 接口）
 app.include_router(doc_router.router)
 app.include_router(form_router.router)
+
+# Dify 兼容路由（/workflows/run，供 Java 后端调用）
+app.include_router(dify_compat_router.router)
 
 
 # =============================================================================
