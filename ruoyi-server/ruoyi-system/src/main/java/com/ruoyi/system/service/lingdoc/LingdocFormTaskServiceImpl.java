@@ -295,6 +295,21 @@ public class LingdocFormTaskServiceImpl implements ILingdocFormTaskService
         // 3. 调用 AI 接口生成文档
         AiGenerateResult result = aiFormService.generate(taskId, originalPath, confirmedFields);
 
+        // 3.5 将 AI 生成的值写回数据库字段表（使前端可预览 aiValue）
+        if (result.getFilledValues() != null && !result.getFilledValues().isEmpty())
+        {
+            for (LingdocFormField field : allFields)
+            {
+                String aiValue = result.getFilledValues().get(field.getFieldName());
+                if (StringUtils.isNotEmpty(aiValue))
+                {
+                    field.setAiValue(aiValue);
+                    formFieldMapper.updateLingdocFormField(field);
+                }
+            }
+            log.info("AI 生成值已回写数据库, taskId={}, filledCount={}", taskId, result.getFilledValues().size());
+        }
+
         // 4. 准备输出目录和文件名
         String originalFileName = task.getOriginalFileName();
         String filledFileName = generateFilledFileName(originalFileName);

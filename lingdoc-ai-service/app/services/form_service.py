@@ -318,11 +318,15 @@ class FormService:
         """
         logger.info(f"[E2E:{task_id}] 开始端到端填表 | 参考文档={len(reference_paths)} | 模板={template_path}")
         
+        total_token_usage = 0
+        
         # Step 1: 提取
         extractions = []
         for path in reference_paths:
             result = await self.extract_from_document(path, f"{task_id}_ref")
             extractions.append(result)
+            if result.get("token_usage"):
+                total_token_usage += result["token_usage"]
         
         # Step 2: 合并
         merged = await self.merge_extractions(extractions)
@@ -332,17 +336,21 @@ class FormService:
                 "output_path": None,
                 "fill_values": {},
                 "fill_rate": 0,
+                "token_usage": total_token_usage,
                 "error": "未能从参考文档提取任何信息"
             }
         
         # Step 3: 生成填写值
         gen_result = await self.generate_fill_values(merged, template_path, task_id)
+        if gen_result.get("token_usage"):
+            total_token_usage += gen_result["token_usage"]
         if not gen_result.get("success"):
             return {
                 "success": False,
                 "output_path": None,
                 "fill_values": gen_result.get("fill_values", {}),
                 "fill_rate": 0,
+                "token_usage": total_token_usage,
                 "error": gen_result.get("error", "生成填写值失败")
             }
         
@@ -358,6 +366,7 @@ class FormService:
             "output_path": render_result.get("outputPath") or render_result.get("output_path"),
             "fill_values": gen_result["fill_values"],
             "fill_rate": gen_result.get("fill_rate", 0),
+            "token_usage": total_token_usage,
             "error": render_result.get("error")
         }
     

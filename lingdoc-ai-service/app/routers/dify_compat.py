@@ -201,7 +201,7 @@ async def _handle_form_extract(inputs: Dict, task_id: str) -> Dict:
     return {
         "fields": fields,
         "references": references,
-        "tokenCost": e2e_result.get("token_usage", 0) if e2e_result.get("token_usage") else 0
+        "tokenCost": 0
     }
 
 
@@ -251,7 +251,9 @@ async def _handle_form_generate(inputs: Dict, task_id: str) -> Dict:
         logger.warning(f"[GENERATE_COMPAT:{task_id}] 读取 Vault 参考文档失败: {e}")
     
     # 生成输出路径
-    output_path = original_file_path.replace("_空白_", "_已填写_") if "_空白_" in original_file_path else f"{original_file_path.rsplit('.', 1)[0]}_filled.{file_type}"
+    # file_type 可能已带点（如 .docx），需去重
+    ext = file_type if file_type.startswith('.') else f'.{file_type}'
+    output_path = original_file_path.replace("_空白_", "_已填写_") if "_空白_" in original_file_path else f"{original_file_path.rsplit('.', 1)[0]}_已填写{ext}"
     os.makedirs(os.path.dirname(output_path) if os.path.dirname(output_path) else "/tmp/lingdoc/output", exist_ok=True)
     
     # 4. 如果有参考文档，调用端到端填表（提取+匹配+渲染）
@@ -278,10 +280,21 @@ async def _handle_form_generate(inputs: Dict, task_id: str) -> Dict:
     fill_values = {}
     for field in confirmed_fields:
         name = field.get("fieldName", "")
-        # 优先用 userValue，其次 aiValue，最后 suggestedValue
-        value = field.get("userValue", "") or field.get("aiValue", "") or field.get("suggestedValue", "")
+        # 优先用 userValue/aiValue/suggestedValue，其次 fieldValue（后端传的key）
+        value = field.get("userValue", "") or field.get("aiValue", "") or field.get("suggestedValue", "") or field.get("fieldValue", "")
         if name:
             fill_values[name] = value
+    
+    logger.info(f"[GENERATE_COMPAT:{task_id}] 兜底渲染 | 字段数={len(fill_values)}")
+    
+    # 调用本地渲染
+    render_result = form_service.render_document(original_file_path, output_path, fill_values)
+    
+    return {
+        "filledFilePath": output_path if render_result.get("success") else original_file_path,
+        "filledValues": fill_values,
+        "tokenCost": 0
+    }
 
 
 async def _handle_default(inputs: Dict, task_id: str) -> Dict:
