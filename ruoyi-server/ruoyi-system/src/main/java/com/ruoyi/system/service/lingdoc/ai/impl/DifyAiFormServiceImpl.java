@@ -43,11 +43,11 @@ public class DifyAiFormServiceImpl implements IAiFormService
 {
     private static final Logger log = LoggerFactory.getLogger(DifyAiFormServiceImpl.class);
 
-    @Autowired
-    private DifyWorkflowClient difyClient;
+    // 直接创建 ObjectMapper，避免 Spring Bean 注入问题
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Autowired
-    ObjectMapper objectMapper;
+    private DifyWorkflowClient difyClient;
 
     /** form-extract Workflow 配置名称 */
     private static final String WORKFLOW_EXTRACT = "form-extract";

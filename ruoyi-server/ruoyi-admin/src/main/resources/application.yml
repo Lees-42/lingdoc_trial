@@ -7,7 +7,7 @@ ruoyi:
   # 版权年份
   copyrightYear: 2026
   # 文件路径 示例（ Windows配置D:/ruoyi/uploadPath，Linux配置 /home/ruoyi/uploadPath）
-  profile: E:/lingdoc
+  profile: /tmp/lingdoc
   # 获取ip地址开关
   addressEnabled: false
   # 验证码类型 math 数字计算 char 字符验证
@@ -146,29 +146,34 @@ referer:
 # Dify AI 配置
 lingdoc:
   ai:
-    dify:
+    local:
       enabled: true
-      default-workflow: organize
-      # 向后兼容：顶层配置作为 default Workflow（organize）的 fallback
-      base-url: http://localhost/v1
-      api-key: ${DIFY_API_KEY:app-WIGw2CnztlO3zhRg6kDrdkHp}
+      base-url: http://localhost:8000
+      api-key: lingdoc-ai-2026-a7f3e9d2b8c1e4f5
       timeout:
-        connect: 10000    # 连接超时 10s
-        read: 30000       # 读取超时 30s
-      # 多 Workflow 配置：新增 Workflow 只需在此添加
+        connect: 10000
+        read: 120000
+    dify:
+      enabled: false
+      default-workflow: organize
+      base-url: http://localhost:8000
+      api-key: lingdoc-ai-2026-a7f3e9d2b8c1e4f5
+      timeout:
+        connect: 10000
+        read: 120000
       workflows:
         form-extract:
-          base-url: http://localhost/v1
-          api-key: ${DIFY_FORM_EXTRACT_KEY:app-YOUR_FORM_EXTRACT_KEY}
+          base-url: http://localhost:8000
+          api-key: lingdoc-ai-2026-a7f3e9d2b8c1e4f5
           timeout:
             connect: 10000
-            read: 30000
+            read: 120000
         form-generate:
-          base-url: http://localhost/v1
-          api-key: ${DIFY_FORM_GENERATE_KEY:app-YOUR_FORM_GENERATE_KEY}
+          base-url: http://localhost:8000
+          api-key: lingdoc-ai-2026-a7f3e9d2b8c1e4f5
           timeout:
             connect: 10000
-            read: 60000     # 文档生成可能更慢
+            read: 120000
 
 # 防止XSS攻击
 xss:
