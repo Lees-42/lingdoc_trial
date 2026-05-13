@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>灵档项目验证面板 - feature/performance-kb-upgrade</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    padding: 40px 20px;
+    color: #333;
+  }
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  .header {
+    text-align: center;
+    margin-bottom: 30px;
+  }
+  .header h1 {
+    font-size: 28px;
+    color: #fff;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  }
+  .header .sub {
+    color: rgba(255,255,255,0.8);
+    font-size: 14px;
+    margin-top: 8px;
+  }
+  .card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 20px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+  }
+  .card-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .status-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+  }
+  .status-item {
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 16px;
+    border-left: 4px solid #ddd;
+  }
+  .status-item.ok { border-left-color: #28a745; }
+  .status-item.warn { border-left-color: #ffc107; }
+  .status-item.err { border-left-color: #dc3545; }
+  .status-label { font-size: 12px; color: #666; margin-bottom: 4px; }
+  .status-value { font-size: 20px; font-weight: 600; }
+  .status-value.ok { color: #28a745; }
+  .status-value.warn { color: #ffc107; }
+  .status-value.err { color: #dc3545; }
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .badge-green { background: #d4edda; color: #155724; }
+  .badge-blue { background: #cce5ff; color: #004085; }
+  .badge-yellow { background: #fff3cd; color: #856404; }
+  .api-list { list-style: none; }
+  .api-list li {
+    padding: 10px 0;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .api-list li:last-child { border-bottom: none; }
+  .method {
+    width: 48px;
+    text-align: center;
+    padding: 3px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #fff;
+  }
+  .method-post { background: #28a745; }
+  .method-get { background: #007bff; }
+  .method-put { background: #ffc107; color: #333; }
+  .method-delete { background: #dc3545; }
+  .api-path { font-family: 'Fira Code', monospace; font-size: 13px; color: #333; }
+  .api-desc { color: #666; font-size: 13px; }
+  .highlight { background: linear-gradient(120deg, #ffeaa7 0%, #ffeaa7 100%); background-repeat: no-repeat; background-size: 100% 40%; background-position: 0 88%; }
+  .metric-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .metric-row:last-child { border-bottom: none; }
+  .metric-key { color: #666; }
+  .metric-val { font-weight: 600; color: #333; }
+  .footer {
+    text-align: center;
+    color: rgba(255,255,255,0.7);
+    font-size: 12px;
+    margin-top: 30px;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>🚀 灵档项目验证面板</h1>
+    <div class="sub">分支: <b>feature/performance-kb-upgrade</b> | 验证时间: 2026-05-14 00:55</div>
+  </div>
+
+  <!-- 服务运行状态 -->
+  <div class="card">
+    <div class="card-title">📊 服务运行状态</div>
+    <div class="status-grid">
+      <div class="status-item ok">
+        <div class="status-label">FastAPI AI 服务</div>
+        <div class="status-value ok">✅ 运行中</div>
+        <div style="font-size:12px;color:#666;margin-top:4px;">PID 2315289 | localhost:8000</div>
+      </div>
+      <div class="status-item ok">
+        <div class="status-label">Celery Worker</div>
+        <div class="status-value ok">✅ 运行中</div>
+        <div style="font-size:12px;color:#666;margin-top:4px;">1 node | concurrency=2 | 3 processes</div>
+      </div>
+      <div class="status-item ok">
+        <div class="status-label">Redis</div>
+        <div class="status-value ok">✅ PONG</div>
+        <div style="font-size:12px;color:#666;margin-top:4px;">hits=697 | misses=520 | cmd=27856</div>
+      </div>
+      <div class="status-item ok">
+        <div class="status-label">Java 后端</div>
+        <div class="status-value ok">✅ 编译通过</div>
+        <div style="font-size:12px;color:#666;margin-top:4px;">mvn compile 无错误</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 新增 API 接口 -->
+  <div class="card">
+    <div class="card-title">🔌 本次新增 API 接口 <span class="badge badge-green">+5 个</span></div>
+    <ul class="api-list">
+      <li>
+        <span class="method method-post">POST</span>
+        <span class="api-path">/api/ai/v1/form/fill/async</span>
+        <span class="api-desc">提交异步填表任务 <span class="badge badge-yellow">NEW</span></span>
+      </li>
+      <li>
+        <span class="method method-get">GET</span>
+        <span class="api-path">/api/ai/v1/form/status/{task_id}</span>
+        <span class="api-desc">查询填表任务进度 <span class="badge badge-yellow">NEW</span></span>
+      </li>
+      <li>
+        <span class="method method-post">POST</span>
+        <span class="api-path">/api/ai/v1/form/extract</span>
+        <span class="api-desc">从参考文档提取信息</span>
+      </li>
+      <li>
+        <span class="method method-post">POST</span>
+        <span class="api-path">/api/ai/v1/form/generate</span>
+        <span class="api-desc">生成表格填写值</span>
+      </li>
+      <li>
+        <span class="method method-post">POST</span>
+        <span class="api-path">/api/ai/v1/form/render</span>
+        <span class="api-desc">渲染填写后的表格文件</span>
+      </li>
+      <li>
+        <span class="method method-post">POST</span>
+        <span class="api-path">/api/ai/v1/form/fill</span>
+        <span class="api-desc">端到端智能填表（同步版）</span>
+      </li>
+    </ul>
+  </div>
+
+  <!-- Celery Worker 详情 -->
+  <div class="card">
+    <div class="card-title">⚙️ Celery Worker 配置</div>
+    <div class="metric-row">
+      <span class="metric-key">Worker 名称</span>
+      <span class="metric-val">celery@VM-70-51-ubuntu</span>
+    </div>
+    <div class="metric-row">
+      <span class="metric-key">并发度</span>
+      <span class="metric-val">2 (prefork)</span>
+    </div>
+    <div class="metric-row">
+      <span class="metric-key">监听队列</span>
+      <span class="metric-val">form, document, celery</span>
+    </div>
+    <div class="metric-row">
+      <span class="metric-key">注册任务</span>
+      <span class="metric-val">fill_form_task, process_document_task, health_check</span>
+    </div>
+    <div class="metric-row">
+      <span class="metric-key">Broker / Backend</span>
+      <span class="metric-val">redis://localhost:6379/0</span>
+    </div>
+    <div class="metric-row">
+      <span class="metric-key">上次真实任务耗时</span>
+      <span class="metric-val">21.8s (端到端填表: AI识别 9.9s + AI生成 11.6s + 渲染 0.1s)</span>
+    </div>
+  </div>
+
+  <!-- 压测结果 -->
+  <div class="card">
+    <div class="card-title">📈 压测结果</div>
+    <div class="metric-row">
+      <span class="metric-key">并发填表响应 (5 并发)</span>
+      <span class="metric-val">平均 9ms | P95 12ms | 最大 12ms | 成功率 100%</span>
+    </div>
+    <div class="metric-row">
+      <span class="metric-key">轮询压力 (20 次)</span>
+      <span class="metric-val">平均 2ms | P95 2ms</span>
+    </div>
+    <div class="metric-row">
+      <span class="metric-key">Redis 缓存命中率</span>
+      <span class="metric-val">57.3% (697 hits / 1217 total) — 压测期间缓存尚未充分预热</span>
+    </div>
+  </div>
+
+  <!-- 后端改动 -->
+  <div class="card">
+    <div class="card-title">📝 Java 后端改动摘要</div>
+    <div class="metric-row">
+      <span class="metric-key">AsyncConfig.java</span>
+      <span class="metric-val">线程池: core=8, max=32, queue=100</span>
+    </div>
+    <div class="metric-row">
+      <span class="metric-key">FormTaskStatusEnum.java</span>
+      <span class="metric-val">6 种状态: PENDING_UPLOAD → EXTRACTING → AI_PROCESSING → COMPLETED → FAILED</span>
+    </div>
+    <div class="metric-row">
+      <span class="metric-key">FormTaskAsyncService.java</span>
+      <span class="metric-val">@Async("aiTaskExecutor") 异步封装 AI 调用</span>
+    </div>
+    <div class="metric-row">
+      <span class="metric-key">RedisCacheConfig.java</span>
+      <span class="metric-val">Spring Cache + RedisTemplate JSON 序列化</span>
+    </div>
+    <div class="metric-row">
+      <span class="metric-key">CacheUtils.java</span>
+      <span class="metric-val">Vault 5min / FormTask 30min / Embedding 24h</span>
+    </div>
+  </div>
+
+  <div class="footer">
+    灵档 LingDoc — 分支 feature/performance-kb-upgrade | 共 5 个 commit | 20 个文件 | +1923 行代码
+  </div>
+</div>
+</body>
+</html>
