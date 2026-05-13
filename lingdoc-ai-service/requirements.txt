@@ -5,6 +5,16 @@
 # 使用方式：pip install -r requirements.txt
 # =============================================================================
 
+# --- Task Queue (Celery + Redis) ---
+# Celery: 分布式任务队列，管理 AI 异步任务
+# Redis: 任务代理和结果存储
+# 启动 Worker: celery -A app.celery_app worker --loglevel=info --concurrency=2
+celery==5.6.3
+redis==7.4.0
+
+# tenacity: 重试装饰器，用于 Celery 任务失败重试
+tenacity==9.1.4
+
 # --- Web Framework ---
 # FastAPI: 高性能异步 Web 框架，用于构建 RESTful API
 fastapi==0.115.0

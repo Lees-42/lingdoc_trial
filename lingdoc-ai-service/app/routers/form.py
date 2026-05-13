@@ -9,11 +9,14 @@ API 路径: /api/ai/v1/form/*
   POST /api/ai/v1/form/extract     - 从参考文档提取信息
   POST /api/ai/v1/form/generate    - 匹配模板字段生成填写值
   POST /api/ai/v1/form/render      - 渲染生成最终文件
-  POST /api/ai/v1/form/fill        - 端到端：提取+生成+渲染（一键填表）
+  POST /api/ai/v1/form/fill        - 端到端：提取+生成+渲染（同步）
+  POST /api/ai/v1/form/fill/async  - 端到端：提交 Celery 异步任务
+  GET  /api/ai/v1/form/status/{task_id} - 查询任务进度
 
 对接说明:
   - 所有接口需要 X-Internal-Token 认证
-  - /api/ai/v1/form/fill 是核心接口，Java 后端直接调用
+  - /api/ai/v1/form/fill/async 是异步入口，Java 后端立即返回 task_id
+  - /api/ai/v1/form/status/{task_id} 供轮询获取进度
 =============================================================================
 """
 
@@ -28,6 +31,8 @@ from app.middleware.auth import internal_auth
 from app.services.form_service import FormService
 from app.config import config
 from app.utils.logger import logger
+from app.tasks import fill_form_task
+import redis
 
 router = APIRouter(
     prefix="/api/ai/v1",
@@ -50,27 +55,6 @@ async def form_extract(
     request: dict,
     token: str = Depends(internal_auth)
 ):
-    """
-    从参考文档（成绩单、证书、申请理由等）提取结构化信息
-    
-    Request:
-    {
-      "task_id": "uuid",
-      "file_path": "/data/lingdoc/upload/xxx.docx"
-    }
-    
-    Response:
-    {
-      "code": 200,
-      "msg": "提取成功",
-      "data": {
-        "success": true,
-        "extracted": {"姓名": "张三", "成绩": 95},
-        "duration_ms": 3200,
-        "token_usage": 1250
-      }
-    }
-    """
     task_id = request.get("task_id", f"extract_{uuid.uuid4().hex[:8]}")
     file_path = request.get("file_path", "")
     
@@ -100,28 +84,6 @@ async def form_generate(
     request: dict,
     token: str = Depends(internal_auth)
 ):
-    """
-    根据已提取信息和空白表格模板，生成字段填写值
-    
-    Request:
-    {
-      "task_id": "uuid",
-      "extracted_data": {"姓名": "张三", "成绩": 95},
-      "template_path": "/data/lingdoc/upload/form.docx"
-    }
-    
-    Response:
-    {
-      "code": 200,
-      "msg": "生成成功",
-      "data": {
-        "success": true,
-        "fill_values": {"姓名": "张三", "学号": "[待补充]"},
-        "fill_rate": 85.0,
-        "duration_ms": 2500
-      }
-    }
-    """
     task_id = request.get("task_id", f"gen_{uuid.uuid4().hex[:8]}")
     extracted_data = request.get("extracted_data", {})
     template_path = request.get("template_path", "")
@@ -153,41 +115,16 @@ async def form_render(
     request: dict,
     token: str = Depends(internal_auth)
 ):
-    """
-    根据填写值渲染生成最终文件
-    
-    Request:
-    {
-      "task_id": "uuid",
-      "template_path": "/data/lingdoc/upload/form.docx",
-      "output_path": "/data/lingdoc/output/filled_form.docx",
-      "fill_values": {"姓名": "张三", "学号": "20240001"}
-    }
-    
-    Response:
-    {
-      "code": 200,
-      "msg": "渲染成功",
-      "data": {
-        "success": true,
-        "output_path": "/data/lingdoc/output/filled_form.docx",
-        "filled_count": 8
-      }
-    }
-    """
     template_path = request.get("template_path", "")
     output_path = request.get("output_path", "")
     fill_values = request.get("fill_values", {})
     
     if not template_path or not os.path.exists(template_path):
         return {"code": 400, "msg": "模板文件不存在", "data": None}
-    
     if not output_path:
         return {"code": 400, "msg": "输出路径不能为空", "data": None}
     
-    # 确保输出目录存在
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    
     result = form_service.render_document(template_path, output_path, fill_values)
     
     return {
@@ -204,41 +141,82 @@ async def form_render(
 
 
 # =============================================================================
-# 4. 端到端一键填表接口（核心）
+# 4. 异步填表任务提交
 # =============================================================================
 
-@router.post("/form/fill", summary="端到端智能填表（核心接口）")
+@router.post("/form/fill/async", summary="提交异步填表任务")
+async def form_fill_async(
+    request: dict,
+    token: str = Depends(internal_auth)
+):
+    task_id = request.get("task_id", f"fill_{uuid.uuid4().hex[:8]}")
+    reference_paths = request.get("reference_paths", [])
+    template_path = request.get("template_path", "")
+    output_path = request.get("output_path", "")
+    
+    if not reference_paths:
+        return {"code": 400, "msg": "参考文档路径不能为空", "data": None}
+    if not template_path or not os.path.exists(template_path):
+        return {"code": 400, "msg": "模板文件不存在", "data": None}
+    if not output_path:
+        return {"code": 400, "msg": "输出路径不能为空", "data": None}
+    
+    celery_task = fill_form_task.delay(
+        task_id=task_id,
+        reference_paths=reference_paths,
+        template_path=template_path,
+        output_path=output_path
+    )
+    
+    logger.info(f"[FILL:ASYNC] task_id={task_id}, celery_id={celery_task.id}")
+    
+    return {
+        "code": 200,
+        "msg": "任务已提交",
+        "data": {
+            "task_id": task_id,
+            "celery_task_id": celery_task.id,
+            "status": "queued"
+        }
+    }
+
+
+@router.get("/form/status/{task_id}", summary="查询填表任务状态")
+async def form_status(
+    task_id: str,
+    token: str = Depends(internal_auth)
+):
+    try:
+        r = redis.Redis.from_url("redis://localhost:6379/0", decode_responses=True)
+        status = r.hgetall(f"lingdoc:task:{task_id}:status")
+        
+        if not status:
+            return {"code": 200, "msg": "任务状态未找到", "data": {"stage": "unknown", "progress": 0}}
+        
+        return {
+            "code": 200,
+            "msg": "查询成功",
+            "data": {
+                "stage": status.get("stage", "unknown"),
+                "progress": int(status.get("progress", 0)),
+                "msg": status.get("msg", ""),
+                "success": status.get("success") == "1"
+            }
+        }
+    except Exception as e:
+        logger.error(f"查询任务状态失败: {e}")
+        return {"code": 500, "msg": "查询失败", "data": None}
+
+
+# =============================================================================
+# 5. 端到端一键填表接口（同步版保留兼容）
+# =============================================================================
+
+@router.post("/form/fill", summary="端到端智能填表（同步版）")
 async def form_fill_end_to_end(
     request: dict,
     token: str = Depends(internal_auth)
 ):
-    """
-    一键完成：提取+生成+渲染
-    
-    Request:
-    {
-      "task_id": "uuid",
-      "reference_paths": [
-        "/data/lingdoc/upload/成绩单.docx",
-        "/data/lingdoc/upload/证书.docx"
-      ],
-      "template_path": "/data/lingdoc/upload/申请表.docx",
-      "output_path": "/data/lingdoc/output/申请表_已填写.docx"
-    }
-    
-    Response:
-    {
-      "code": 200,
-      "msg": "填表成功",
-      "data": {
-        "success": true,
-        "output_path": "/data/lingdoc/output/申请表_已填写.docx",
-        "fill_values": {"姓名": "张三", ...},
-        "fill_rate": 85.0,
-        "duration_ms": 8500
-      }
-    }
-    """
     task_id = request.get("task_id", f"fill_{uuid.uuid4().hex[:8]}")
     reference_paths = request.get("reference_paths", [])
     template_path = request.get("template_path", "")
@@ -249,7 +227,6 @@ async def form_fill_end_to_end(
         f"模板={template_path}"
     )
     
-    # 参数校验
     if not reference_paths:
         return {"code": 400, "msg": "参考文档路径不能为空", "data": None}
     if not template_path or not os.path.exists(template_path):
@@ -257,12 +234,10 @@ async def form_fill_end_to_end(
     if not output_path:
         return {"code": 400, "msg": "输出路径不能为空", "data": None}
     
-    # 校验参考文件是否存在
     for path in reference_paths:
         if not os.path.exists(path):
             return {"code": 400, "msg": f"参考文件不存在: {path}", "data": None}
     
-    # 执行端到端填表
     start = time.time()
     result = await form_service.fill_form_end_to_end(
         reference_paths=reference_paths,
