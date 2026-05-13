@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>VSCode 一键编译 - LingDoc</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    background: #1e1e1e;
+    min-height: 100vh;
+    padding: 30px;
+    color: #ccc;
+  }
+  .container { max-width: 800px; margin: 0 auto; }
+  .header { text-align: center; margin-bottom: 30px; }
+  .header h1 { font-size: 22px; color: #fff; }
+  .header .sub { color: #888; font-size: 13px; margin-top: 6px; }
+  .shortcut-bar {
+    background: #2d2d30;
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-bottom: 24px;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+  }
+  .shortcut-item { text-align: center; }
+  .shortcut-key {
+    background: #3c3c3c;
+    border: 1px solid #555;
+    border-radius: 4px;
+    padding: 4px 10px;
+    font-size: 13px;
+    color: #4ec9b0;
+    font-family: 'Fira Code', monospace;
+    margin-bottom: 6px;
+    display: inline-block;
+  }
+  .shortcut-label { font-size: 12px; color: #888; }
+  .section { margin-bottom: 20px; }
+  .section-title {
+    font-size: 14px;
+    color: #4ec9b0;
+    margin-bottom: 10px;
+    padding-left: 8px;
+    border-left: 3px solid #4ec9b0;
+  }
+  .task-list { background: #252526; border-radius: 8px; overflow: hidden; }
+  .task-item {
+    display: flex;
+    align-items: center;
+    padding: 10px 16px;
+    border-bottom: 1px solid #333;
+    font-size: 13px;
+  }
+  .task-item:last-child { border-bottom: none; }
+  .task-icon { width: 20px; text-align: center; margin-right: 10px; font-size: 14px; }
+  .task-name { color: #dcdcaa; flex: 1; }
+  .task-desc { color: #808080; font-size: 11px; }
+  .badge {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 10px;
+    margin-left: 8px;
+  }
+  .badge-green { background: #2ea043; color: #fff; }
+  .badge-blue { background: #1f6feb; color: #fff; }
+  .badge-yellow { background: #d29922; color: #000; }
+  .files-section {
+    background: #2d2d30;
+    border-radius: 8px;
+    padding: 16px;
+    font-family: 'Fira Code', monospace;
+    font-size: 12px;
+    color: #858585;
+  }
+  .files-section .f { color: #dcdcaa; }
+  .files-section .d { color: #4ec9b0; }
+  .files-section .c { color: #ce9178; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>🚀 VSCode 一键编译配置</h1>
+    <div class="sub">LingDoc 灵档项目 — 按一个键编译/启动整个项目</div>
+  </div>
+
+  <div class="shortcut-bar">
+    <div class="shortcut-item">
+      <div class="shortcut-key">Ctrl+Shift+B</div>
+      <div class="shortcut-label">一键启动完整环境</div>
+    </div>
+    <div class="shortcut-item">
+      <div class="shortcut-key">Ctrl+Shift+P</div>
+      <div class="shortcut-label">任务面板</div>
+    </div>
+    <div class="shortcut-item">
+      <div class="shortcut-key">F5</div>
+      <div class="shortcut-label">调试</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">🔥 组合任务（一键操作）</div>
+    <div class="task-list">
+      <div class="task-item">
+        <div class="task-icon">🚀</div>
+        <div class="task-name">一键启动完整开发环境</div>
+        <span class="badge badge-green">默认</span>
+        <div class="task-desc">Redis → AI服务 → Celery → Java → 前端</div>
+      </div>
+      <div class="task-item">
+        <div class="task-icon">🔨</div>
+        <div class="task-name">一键全量编译</div>
+        <span class="badge badge-blue">编译</span>
+        <div class="task-desc">Java编译 + 前端依赖 + AI依赖检查</div>
+      </div>
+      <div class="task-item">
+        <div class="task-icon">🛑</div>
+        <div class="task-name">一键停止所有服务</div>
+        <span class="badge badge-yellow">清理</span>
+        <div class="task-desc">杀进程，清现场</div>
+      </div>
+      <div class="task-item">
+        <div class="task-icon">📊</div>
+        <div class="task-name">一键压测</div>
+        <span class="badge badge-blue">测试</span>
+        <div class="task-desc">5并发填表压测</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">🔧 单独操作</div>
+    <div class="task-list">
+      <div class="task-item">
+        <div class="task-icon">☕</div>
+        <div class="task-name">编译 Java 后端</div>
+        <div class="task-desc">mvn clean compile -pl ruoyi-admin -am</div>
+      </div>
+      <div class="task-item">
+        <div class="task-icon">🌐</div>
+        <div class="task-name">启动前端</div>
+        <div class="task-desc">npm run dev → localhost:5173</div>
+      </div>
+      <div class="task-item">
+        <div class="task-icon">🐍</div>
+        <div class="task-name">启动 AI 服务</div>
+        <div class="task-desc">uvicorn app.main:app --port 8000</div>
+      </div>
+      <div class="task-item">
+        <div class="task-icon">⚙️</div>
+        <div class="task-name">启动 Celery Worker</div>
+        <div class="task-desc">-Q form,document,celery --concurrency=2</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">📁 配置文件</div>
+    <div class="files-section">
+      <div class="d">.vscode/</div>
+      <div>  <span class="f">tasks.json</span>    <span class="c">← 任务定义 (15+ 个任务)</span></div>
+      <div>  <span class="f">settings.json</span> <span class="c">← 工作区设置</span></div>
+      <div>  <span class="f">launch.json</span>   <span class="c">← 调试配置</span></div>
+      <div class="d">scripts/</div>
+      <div>  <span class="f">check-env.sh</span>         <span class="c">← 环境检查</span></div>
+      <div>  <span class="f">start-ai-service.sh</span>  <span class="c">← 启动 AI</span></div>
+      <div>  <span class="f">start-celery.sh</span>      <span class="c">← 启动 Worker</span></div>
+      <div>  <span class="f">stop-all.sh</span>          <span class="c">← 停止所有</span></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
