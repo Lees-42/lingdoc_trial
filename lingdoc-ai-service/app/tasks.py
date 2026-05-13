@@ -18,6 +18,7 @@ Celery Tasks - AI 异步任务定义
 
 import time
 import traceback
+import asyncio
 from typing import List, Optional
 
 from app.celery_app import celery_app
@@ -105,13 +106,13 @@ def fill_form_task(self,
         # Stage 3: 渲染 (70-100%)
         _update_progress(task_id, "rendering", 80, "正在生成最终文档...")
 
-        # 执行端到端填表
-        result = form_service.fill_form_end_to_end(
+        # 执行端到端填表（异步函数需用 asyncio.run 包装）
+        result = asyncio.run(form_service.fill_form_end_to_end(
             reference_paths=reference_paths,
             template_path=template_path,
             output_path=output_path,
             task_id=task_id
-        )
+        ))
 
         duration_ms = int((time.time() - start) * 1000)
 

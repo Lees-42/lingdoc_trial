@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 =============================================================================
@@ -95,6 +94,8 @@ class LoadTester:
         print(f"  平均响应: {statistics.mean(durations):.0f}ms")
         print(f"  P95 响应: {self._percentile(durations, 95):.0f}ms")
         print(f"  最大响应: {max(durations):.0f}ms")
+        
+        return [r["data"].get("task_id", "") for r in successes if r.get("data")] 
 
     # ==================== 场景2: 轮询压力 ====================
 
@@ -137,8 +138,9 @@ class LoadTester:
         print(f"目标: {self.host}")
         print("=" * 60)
 
-        self.test_fill_async_concurrent(concurrency=5)
-        self.test_poll_progress("test_task_123", requests_count=20)
+        task_ids = self.test_fill_async_concurrent(concurrency=5)
+        if task_ids:
+            self.test_poll_progress(task_ids[0], requests_count=20)
         self.test_vault_cache()
 
         print("\n" + "=" * 60)

@@ -30,4 +30,4 @@ COPY .env .
 EXPOSE 8000
 
 # 启动命令（可被覆盖）
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["celery", "-A", "app.celery_app", "worker", "--loglevel=info", "--concurrency=2", "-Q", "form,document,celery"]
