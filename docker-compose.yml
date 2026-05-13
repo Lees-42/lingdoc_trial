@@ -1,0 +1,88 @@
+version: "3.8"
+
+# =============================================================================
+# LingDoc 全栈部署 - Docker Compose
+# =============================================================================
+# 服务清单:
+#   redis        - 缓存 + Celery Broker
+#   ai-service   - FastAPI AI 服务
+#   celery-worker- AI 异步任务 Worker
+#   backend      - Spring Boot 后端（可选，本地开发时通常不 Docker 化）
+#
+# 使用方式:
+#   docker-compose up -d redis
+#   cd lingdoc-ai-service && source venv/bin/activate && uvicorn app.main:app --host 0.0.0.0 --port 8000
+#   cd lingdoc-ai-service && celery -A app.celery_app worker --loglevel=info --concurrency=2
+# =============================================================================
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: lingdoc-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  ai-service:
+    build:
+      context: ./lingdoc-ai-service
+      dockerfile: Dockerfile
+    container_name: lingdoc-ai-service
+    ports:
+      - "8000:8000"
+    environment:
+      - DASHSCOPE_API_KEY=${DASHSCOPE_API_KEY}
+      - AI_INTERNAL_TOKEN=${AI_INTERNAL_TOKEN}
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - /tmp/lingdoc:/data/lingdoc
+    restart: unless-stopped
+
+  celery-worker:
+    build:
+      context: ./lingdoc-ai-service
+      dockerfile: Dockerfile
+    container_name: lingdoc-celery-worker
+    command: celery -A app.celery_app worker --loglevel=info --concurrency=2
+    environment:
+      - DASHSCOPE_API_KEY=${DASHSCOPE_API_KEY}
+      - AI_INTERNAL_TOKEN=${AI_INTERNAL_TOKEN}
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_healthy
+      ai-service:
+        condition: service_started
+    volumes:
+      - /tmp/lingdoc:/data/lingdoc
+    restart: unless-stopped
+
+  # 可选：Flower 监控
+  flower:
+    build:
+      context: ./lingdoc-ai-service
+      dockerfile: Dockerfile
+    container_name: lingdoc-flower
+    command: celery -A app.celery_app flower --port=5555
+    ports:
+      - "5555:5555"
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - redis
+    profiles:
+      - monitoring
+
+volumes:
+  redis_data:
