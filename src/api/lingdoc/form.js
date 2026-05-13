@@ -101,6 +101,16 @@ export function saveToVault(data) {
   })
 }
 
+// ==================== 进度轮询 ====================
+
+// 查询任务进度
+export function getFormProgress(taskId) {
+  return request({
+    url: '/lingdoc/form/progress/' + taskId,
+    method: 'get'
+  })
+}
+
 // ==================== 参考文档 ====================
 
 // 获取参考文档列表

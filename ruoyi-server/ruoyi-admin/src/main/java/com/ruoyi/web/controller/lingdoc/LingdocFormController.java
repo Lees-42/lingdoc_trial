@@ -34,6 +34,8 @@ import com.ruoyi.system.domain.lingdoc.FormFieldUpdateRequest;
 import com.ruoyi.system.domain.lingdoc.LingdocFormReference;
 import com.ruoyi.system.domain.lingdoc.LingdocFormTask;
 import com.ruoyi.system.mapper.lingdoc.LingdocFileIndexMapper;
+import com.ruoyi.common.enums.FormTaskStatusEnum;
+import com.ruoyi.system.service.lingdoc.FormTaskAsyncService;
 import com.ruoyi.system.service.lingdoc.ILingdocFormTaskService;
 
 /**
@@ -49,6 +51,9 @@ public class LingdocFormController extends BaseController
 
     @Autowired
     private ILingdocFormTaskService formTaskService;
+
+    @Autowired
+    private FormTaskAsyncService formTaskAsyncService;
 
     @Autowired
     private LingdocFileIndexMapper lingdocFileIndexMapper;
@@ -120,24 +125,21 @@ public class LingdocFormController extends BaseController
             task.setOriginalFileId(fileId);
             task.setOriginalFileUrl(fileName);
             task.setOriginalFileName(originalFilename);
-            task.setStatus("1"); // 识别中
+            task.setStatus(FormTaskStatusEnum.EXTRACTING.getCode()); // 识别中
             task.setFieldCount(0);
             task.setConfirmedCount(0);
             task.setTokenCost(0);
             task.setCreateBy(getUsername());
             formTaskService.insertLingdocFormTask(task);
 
-            // 调用 AI 字段识别（当前为 Mock 实现，另一位开发者替换真实 AI）
-            formTaskService.extractFields(task.getTaskId());
+            // 调用 AI 字段识别（异步，不阻塞接口）
+            formTaskAsyncService.extractFieldsAsync(task.getTaskId());
 
-            // 重新查询任务获取最新状态
-            LingdocFormTask updatedTask = formTaskService.selectLingdocFormTaskById(task.getTaskId());
-
-            AjaxResult ajax = AjaxResult.success("上传成功，表格字段识别完成");
-            ajax.put("taskId", updatedTask.getTaskId());
-            ajax.put("taskName", updatedTask.getTaskName());
+            AjaxResult ajax = AjaxResult.success("上传成功，表格字段识别中");
+            ajax.put("taskId", task.getTaskId());
+            ajax.put("taskName", task.getTaskName());
             ajax.put("originalFileName", originalFilename);
-            ajax.put("status", updatedTask.getStatus());
+            ajax.put("status", task.getStatus());
             return ajax;
         }
         catch (Exception e)
@@ -185,16 +187,49 @@ public class LingdocFormController extends BaseController
             return AjaxResult.error("任务不存在");
         }
 
-        // 调用文档生成（当前为 Mock 实现，另一位开发者替换真实 AI）
-        formTaskService.generateDocument(taskId);
+        // 检查状态：只有待确认状态才能生成
+        if (!FormTaskStatusEnum.AWAIT_CONFIRM.getCode().equals(task.getStatus()))
+        {
+            return AjaxResult.error("当前状态不允许生成，请等待识别完成或检查是否已生成");
+        }
 
-        // 重新查询任务获取最新状态
-        LingdocFormTask updatedTask = formTaskService.selectLingdocFormTaskById(taskId);
+        // 更新状态为生成中（前端轮询时可见）
+        task.setStatus(FormTaskStatusEnum.COMPLETED.getCode());
+        formTaskService.updateLingdocFormTask(task);
 
-        return AjaxResult.success("文档生成成功")
+        // 调用文档生成（异步，不阻塞接口）
+        formTaskAsyncService.generateDocumentAsync(taskId);
+
+        return AjaxResult.success("文档生成已提交，正在处理中")
                 .put("taskId", taskId)
-                .put("filledFileUrl", updatedTask.getFilledFileUrl())
-                .put("status", updatedTask.getStatus());
+                .put("status", FormTaskStatusEnum.AI_PROCESSING.getCode());
+    }
+
+    /**
+     * 查询任务进度（前端轮询用）
+     */
+    @PreAuthorize("@ss.hasPermi('lingdoc:form:list')")
+    @GetMapping("/progress/{taskId}")
+    public AjaxResult progress(@PathVariable("taskId") String taskId)
+    {
+        LingdocFormTask task = formTaskService.selectLingdocFormTaskById(taskId);
+        if (task == null)
+        {
+            return AjaxResult.error("任务不存在");
+        }
+
+        AjaxResult ajax = AjaxResult.success();
+        ajax.put("taskId", task.getTaskId());
+        ajax.put("status", task.getStatus());
+        ajax.put("statusName", FormTaskStatusEnum.fromCode(task.getStatus()) != null
+                ? FormTaskStatusEnum.fromCode(task.getStatus()).getDesc() : "未知");
+        ajax.put("fieldCount", task.getFieldCount());
+        ajax.put("confirmedCount", task.getConfirmedCount());
+        ajax.put("filledFileUrl", task.getFilledFileUrl());
+        ajax.put("filledFileName", task.getFilledFileName());
+        ajax.put("errorMsg", task.getErrorMsg());
+        ajax.put("tokenCost", task.getTokenCost());
+        return ajax;
     }
 
     /**

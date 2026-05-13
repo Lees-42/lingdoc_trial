@@ -230,7 +230,7 @@
 import { ref, computed, reactive } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Upload, Document, MagicStick, Download, Refresh, Check, ArrowDown, ArrowUp, View } from '@element-plus/icons-vue'
-import { uploadForm, getFormTask, updateFormFields, generateForm, downloadForm } from '@/api/lingdoc/form'
+import { uploadForm, getFormTask, updateFormFields, generateForm, downloadForm, getFormProgress } from '@/api/lingdoc/form'
 
 // ========== 状态 ==========
 const currentTask = ref(null)
@@ -243,7 +243,8 @@ const uploadRef = ref(null)
 const uploadData = reactive({ taskName: '', file: null })
 const originalFileUrl = ref('')
 const filledFileUrl = ref('')
-const isFieldPanelCollapsed = ref(false)
+const uploadPollingTimer = ref(null)
+const generatingPollingTimer = ref(null)
 
 // ========== 计算属性 ==========
 const statusText = computed(() => {
@@ -296,8 +297,8 @@ async function submitUpload() {
     if (res.code === 200) {
       ElMessage.success(res.msg || '上传成功')
       showUploadDialog.value = false
-      // 加载任务详情
-      await loadTaskDetail(res.taskId)
+      // 开始轮询任务进度
+      startUploadPolling(res.taskId)
     } else {
       ElMessage.error(res.msg || '上传失败')
     }
@@ -308,6 +309,38 @@ async function submitUpload() {
     uploadData.taskName = ''
     uploadData.file = null
     uploadRef.value?.clearFiles()
+  }
+}
+
+// 上传后轮询进度（识别中 → 待确认）
+function startUploadPolling(taskId) {
+  // 先立即查一次
+  pollUploadProgress(taskId)
+  // 每 2 秒轮询
+  uploadPollingTimer.value = setInterval(() => {
+    pollUploadProgress(taskId)
+  }, 2000)
+}
+
+async function pollUploadProgress(taskId) {
+  try {
+    const res = await getFormProgress(taskId)
+    if (res.code === 200) {
+      const status = res.status
+      // 识别完成或失败，停止轮询
+      if (status === '2' || status === '4') {
+        clearInterval(uploadPollingTimer.value)
+        uploadPollingTimer.value = null
+        if (status === '2') {
+          ElMessage.success('字段识别完成，请确认')
+          await loadTaskDetail(taskId)
+        } else {
+          ElMessage.error('识别失败：' + (res.errorMsg || '未知错误'))
+        }
+      }
+    }
+  } catch (e) {
+    console.error('轮询进度失败', e)
   }
 }
 
@@ -376,15 +409,49 @@ async function handleGenerate() {
   try {
     const res = await generateForm({ taskId: currentTask.value.taskId })
     if (res.code === 200) {
-      ElMessage.success('文档生成成功')
-      await loadTaskDetail(currentTask.value.taskId)
+      ElMessage.success('文档生成已提交，正在处理中')
+      // 开始轮询生成进度
+      startGeneratePolling(currentTask.value.taskId)
     } else {
       ElMessage.error(res.msg || '生成失败')
+      generating.value = false
     }
   } catch (e) {
     ElMessage.error('生成失败：' + e.message)
-  } finally {
     generating.value = false
+  }
+}
+
+// 生成后轮询进度（AI处理中 → 已完成/失败）
+function startGeneratePolling(taskId) {
+  // 先立即查一次
+  pollGenerateProgress(taskId)
+  // 每 2 秒轮询
+  generatingPollingTimer.value = setInterval(() => {
+    pollGenerateProgress(taskId)
+  }, 2000)
+}
+
+async function pollGenerateProgress(taskId) {
+  try {
+    const res = await getFormProgress(taskId)
+    if (res.code === 200) {
+      const status = res.status
+      // 生成完成或失败，停止轮询
+      if (status === '3' || status === '4') {
+        clearInterval(generatingPollingTimer.value)
+        generatingPollingTimer.value = null
+        generating.value = false
+        if (status === '3') {
+          ElMessage.success('文档生成完成')
+          await loadTaskDetail(taskId)
+        } else {
+          ElMessage.error('生成失败：' + (res.errorMsg || '未知错误'))
+        }
+      }
+    }
+  } catch (e) {
+    console.error('轮询进度失败', e)
   }
 }
 
@@ -482,6 +549,14 @@ function resetPage() {
   references.value = []
   originalFileUrl.value = ''
   filledFileUrl.value = ''
+  if (uploadPollingTimer.value) {
+    clearInterval(uploadPollingTimer.value)
+    uploadPollingTimer.value = null
+  }
+  if (generatingPollingTimer.value) {
+    clearInterval(generatingPollingTimer.value)
+    generatingPollingTimer.value = null
+  }
 }
 
 // ========== 工具函数 ==========
